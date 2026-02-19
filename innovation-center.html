@@ -1,0 +1,1012 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Innovation Center — Visit</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300;1,400&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink: #f5f0e8;
+    --cream: #0a0a0a;
+    --rust: #c94f2c;
+    --gold: #d4a843;
+    --steel: #8a9ba8;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--ink);
+    color: var(--cream);
+    font-family: 'Cormorant Garamond', serif;
+    overflow-x: hidden;
+    cursor: none;
+  }
+
+  /* Custom cursor */
+  .cursor {
+    position: fixed;
+    width: 12px; height: 12px;
+    background: var(--rust);
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 9999;
+    transform: translate(-50%, -50%);
+    transition: width 0.2s, height 0.2s, background 0.2s;
+    mix-blend-mode: multiply;
+  }
+  .cursor-ring {
+    position: fixed;
+    width: 40px; height: 40px;
+    border: 1px solid rgba(197, 79, 44, 0.4);
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 9998;
+    transform: translate(-50%, -50%);
+    transition: all 0.15s ease-out;
+  }
+  body:hover .cursor { opacity: 1; }
+
+  /* Grain overlay */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 1000;
+    opacity: 0.35;
+  }
+
+  /* HERO */
+  .hero {
+    min-height: 100vh;
+    display: grid;
+    grid-template-rows: auto 1fr auto;
+    padding: 0;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .hero-bg {
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(ellipse 60% 80% at 70% 50%, rgba(201, 79, 44, 0.08) 0%, transparent 70%),
+      radial-gradient(ellipse 40% 60% at 20% 80%, rgba(212, 168, 67, 0.05) 0%, transparent 60%),
+      var(--ink);
+  }
+
+  .hero-grid {
+    position: absolute;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(10, 10, 10, 0.05) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(10, 10, 10, 0.05) 1px, transparent 1px);
+    background-size: 80px 80px;
+  }
+
+  nav {
+    position: relative;
+    z-index: 10;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 2.5rem 5vw;
+    border-bottom: 1px solid rgba(10, 10, 10, 0.1);
+  }
+
+  .logo {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.7rem;
+    letter-spacing: 0.25em;
+    text-transform: uppercase;
+    color: var(--steel);
+  }
+
+  .logo span { color: var(--rust); }
+
+  .nav-links {
+    display: flex;
+    gap: 3rem;
+    list-style: none;
+  }
+
+  .nav-links a {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.65rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--steel);
+    text-decoration: none;
+    transition: color 0.3s;
+  }
+  .nav-links a:hover { color: var(--rust); }
+
+  .hero-content {
+    position: relative;
+    z-index: 10;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 0 5vw;
+    padding-top: 6vh;
+  }
+
+  .hero-eyebrow {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.65rem;
+    letter-spacing: 0.4em;
+    text-transform: uppercase;
+    color: var(--rust);
+    margin-bottom: 2rem;
+    opacity: 0;
+    animation: fadeUp 0.8s 0.2s forwards;
+  }
+
+  .hero-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(5rem, 16vw, 14rem);
+    line-height: 0.88;
+    letter-spacing: -0.01em;
+    color: var(--cream);
+    opacity: 0;
+    animation: fadeUp 0.9s 0.35s forwards;
+  }
+
+  .hero-title em {
+    font-family: 'Cormorant Garamond', serif;
+    font-style: italic;
+    font-weight: 300;
+    color: var(--gold);
+    font-size: 0.72em;
+  }
+
+  .hero-subtitle {
+    max-width: 480px;
+    margin-top: 3rem;
+    font-size: 1.25rem;
+    font-weight: 300;
+    line-height: 1.65;
+    color: rgba(10, 10, 10, 0.65);
+    opacity: 0;
+    animation: fadeUp 0.9s 0.5s forwards;
+  }
+
+  .hero-cta {
+    display: flex;
+    align-items: center;
+    gap: 2rem;
+    margin-top: 4rem;
+    opacity: 0;
+    animation: fadeUp 0.9s 0.65s forwards;
+  }
+
+  .btn-primary {
+    display: inline-flex;
+    align-items: center;
+    gap: 1rem;
+    background: var(--rust);
+    color: var(--cream);
+    padding: 1rem 2.5rem;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.7rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    text-decoration: none;
+    transition: all 0.3s;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .btn-primary::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: var(--gold);
+    transform: translateX(-101%);
+    transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .btn-primary:hover::before { transform: translateX(0); }
+  .btn-primary span { position: relative; z-index: 1; }
+  .btn-primary .arrow { font-size: 1rem; transition: transform 0.3s; }
+  .btn-primary:hover .arrow { transform: translateX(5px); }
+
+  .btn-ghost {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.7rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--steel);
+    text-decoration: none;
+    border-bottom: 1px solid rgba(138, 155, 168, 0.3);
+    padding-bottom: 3px;
+    transition: all 0.3s;
+  }
+  .btn-ghost:hover { color: var(--rust); border-color: var(--rust); }
+
+  .hero-number {
+    position: absolute;
+    right: 5vw;
+    bottom: 10vh;
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 18vw;
+    color: rgba(10, 10, 10, 0.04);
+    line-height: 1;
+    pointer-events: none;
+    z-index: 1;
+    animation: fadeIn 1.5s 0.8s both;
+  }
+
+  .hero-footer {
+    position: relative;
+    z-index: 10;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    padding: 2.5rem 5vw;
+    border-top: 1px solid rgba(10, 10, 10, 0.1);
+    opacity: 0;
+    animation: fadeUp 0.8s 0.8s forwards;
+  }
+
+  .hero-stat {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+  }
+
+  .stat-value {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 2.5rem;
+    color: var(--cream);
+    line-height: 1;
+  }
+
+  .stat-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.6rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--steel);
+  }
+
+  .scroll-hint {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.75rem;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.55rem;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    color: var(--steel);
+  }
+
+  .scroll-line {
+    width: 1px;
+    height: 60px;
+    background: linear-gradient(to bottom, var(--rust), transparent);
+    animation: scrollPulse 2s ease-in-out infinite;
+  }
+
+  @keyframes scrollPulse {
+    0%, 100% { opacity: 0.4; transform: scaleY(0.8); }
+    50% { opacity: 1; transform: scaleY(1); }
+  }
+
+  /* ABOUT SECTION */
+  .section-about {
+    padding: 12rem 5vw;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8rem;
+    align-items: center;
+    position: relative;
+  }
+
+  .section-about::before {
+    content: 'ABOUT';
+    position: absolute;
+    top: 6rem;
+    left: 5vw;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.6rem;
+    letter-spacing: 0.4em;
+    color: var(--rust);
+    text-transform: uppercase;
+  }
+
+  .about-visual {
+    position: relative;
+    height: 600px;
+  }
+
+  .about-frame {
+    position: absolute;
+    inset: 0;
+    border: 1px solid rgba(10, 10, 10, 0.1);
+  }
+
+  .about-frame-inner {
+    position: absolute;
+    top: 2rem; left: 2rem; right: -2rem; bottom: -2rem;
+    border: 1px solid rgba(201, 79, 44, 0.15);
+    background: linear-gradient(135deg, rgba(201, 79, 44, 0.02) 0%, transparent 60%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .visual-icon {
+    font-size: 4rem;
+    opacity: 0.15;
+  }
+
+  .visual-number {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 7rem;
+    color: rgba(10, 10, 10, 0.05);
+    line-height: 1;
+  }
+
+  .about-grid {
+    position: absolute;
+    inset: 2rem -2rem -2rem 2rem;
+    background-image:
+      linear-gradient(rgba(10, 10, 10, 0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(10, 10, 10, 0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+  }
+
+  .about-accent {
+    position: absolute;
+    top: 3rem; right: 3rem;
+    width: 80px; height: 80px;
+    border-top: 2px solid var(--rust);
+    border-right: 2px solid var(--rust);
+    opacity: 0.5;
+  }
+
+  .about-text h2 {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: clamp(2.5rem, 4vw, 3.5rem);
+    font-weight: 300;
+    line-height: 1.2;
+    margin-bottom: 2rem;
+    color: var(--cream);
+  }
+
+  .about-text h2 em {
+    font-style: italic;
+    color: var(--gold);
+  }
+
+  .about-text p {
+    font-size: 1.1rem;
+    line-height: 1.8;
+    color: rgba(10, 10, 10, 0.65);
+    margin-bottom: 1.5rem;
+  }
+
+  .divider {
+    width: 60px;
+    height: 1px;
+    background: var(--rust);
+    margin: 2.5rem 0;
+  }
+
+  .feature-list {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 0.8rem;
+  }
+
+  .feature-list li {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.7rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--steel);
+  }
+
+  .feature-list li::before {
+    content: '';
+    width: 6px; height: 6px;
+    background: var(--rust);
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  /* SPACES SECTION */
+  .section-spaces {
+    padding: 8rem 5vw;
+    position: relative;
+  }
+
+  .section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    margin-bottom: 5rem;
+    border-bottom: 1px solid rgba(10, 10, 10, 0.1);
+    padding-bottom: 3rem;
+  }
+
+  .section-header h2 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(3rem, 7vw, 6rem);
+    line-height: 0.9;
+    color: var(--cream);
+  }
+
+  .section-count {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.65rem;
+    letter-spacing: 0.3em;
+    color: var(--steel);
+    text-transform: uppercase;
+  }
+
+  .spaces-grid {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr;
+    grid-template-rows: auto auto;
+    gap: 1.5px;
+  }
+
+  .space-card {
+    background: rgba(10, 10, 10, 0.02);
+    border: 1px solid rgba(10, 10, 10, 0.08);
+    padding: 3rem;
+    position: relative;
+    overflow: hidden;
+    transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    cursor: none;
+  }
+
+  .space-card:hover {
+    background: rgba(10, 10, 10, 0.05);
+    border-color: rgba(201, 79, 44, 0.3);
+  }
+
+  .space-card.featured {
+    grid-row: 1 / 3;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    min-height: 500px;
+    background: linear-gradient(to top, rgba(255,255,255,0.6) 0%, rgba(201, 79, 44, 0.05) 100%),
+                rgba(201, 79, 44, 0.02);
+  }
+
+  .space-card-number {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1rem;
+    color: var(--rust);
+    margin-bottom: auto;
+  }
+
+  .space-card-bg-text {
+    position: absolute;
+    bottom: -1rem;
+    right: -1rem;
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 8rem;
+    color: rgba(10, 10, 10, 0.04);
+    line-height: 1;
+    pointer-events: none;
+  }
+
+  .space-card h3 {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 1.8rem;
+    font-weight: 300;
+    color: var(--cream);
+    margin-bottom: 0.75rem;
+  }
+
+  .space-card.featured h3 {
+    font-size: 2.5rem;
+  }
+
+  .space-card p {
+    font-size: 0.95rem;
+    line-height: 1.7;
+    color: rgba(10, 10, 10, 0.6);
+  }
+
+  .space-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.55rem;
+    letter-spacing: 0.25em;
+    text-transform: uppercase;
+    color: var(--rust);
+    margin-bottom: 1rem;
+  }
+
+  /* VISIT INFO */
+  .section-visit {
+    padding: 10rem 5vw;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8rem;
+    position: relative;
+  }
+
+  .section-visit::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 50%;
+    width: 1px;
+    height: 100%;
+    background: linear-gradient(to bottom, transparent, rgba(10, 10, 10, 0.1), transparent);
+  }
+
+  .visit-col h2 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(3rem, 5vw, 4.5rem);
+    line-height: 0.9;
+    color: var(--cream);
+    margin-bottom: 3rem;
+  }
+
+  .info-block {
+    margin-bottom: 3rem;
+    padding-bottom: 3rem;
+    border-bottom: 1px solid rgba(10, 10, 10, 0.08);
+  }
+
+  .info-block:last-child { border-bottom: none; }
+
+  .info-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.6rem;
+    letter-spacing: 0.35em;
+    text-transform: uppercase;
+    color: var(--rust);
+    margin-bottom: 0.75rem;
+  }
+
+  .info-value {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 1.4rem;
+    font-weight: 300;
+    color: var(--cream);
+    line-height: 1.5;
+  }
+
+  .info-value.large {
+    font-size: 2rem;
+  }
+
+  .schedule-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1px;
+    margin-top: 0.5rem;
+  }
+
+  .schedule-item {
+    padding: 1rem;
+    background: rgba(10, 10, 10, 0.02);
+    border: 1px solid rgba(10, 10, 10, 0.08);
+  }
+
+  .schedule-day {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.6rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--steel);
+    margin-bottom: 0.3rem;
+  }
+
+  .schedule-time {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 1.1rem;
+    color: var(--cream);
+  }
+
+  /* BOOKING */
+  .section-booking {
+    margin: 0 5vw 8rem;
+    padding: 6rem;
+    background: linear-gradient(135deg, rgba(201, 79, 44, 0.05) 0%, rgba(212, 168, 67, 0.02) 100%);
+    border: 1px solid rgba(201, 79, 44, 0.15);
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 4rem;
+    align-items: center;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .section-booking::before {
+    content: 'BOOK';
+    position: absolute;
+    right: -2rem;
+    bottom: -2rem;
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 12rem;
+    color: rgba(201, 79, 44, 0.03);
+    line-height: 1;
+  }
+
+  .booking-text h2 {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: clamp(2rem, 3.5vw, 3rem);
+    font-weight: 300;
+    color: var(--cream);
+    margin-bottom: 1.25rem;
+  }
+
+  .booking-text h2 em {
+    font-style: italic;
+    color: var(--gold);
+  }
+
+  .booking-text p {
+    font-size: 1.05rem;
+    color: rgba(10, 10, 10, 0.65);
+    line-height: 1.7;
+    max-width: 500px;
+  }
+
+  .booking-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    flex-shrink: 0;
+    position: relative;
+    z-index: 1;
+  }
+
+  .contact-strip {
+    margin-top: 2rem;
+    display: flex;
+    gap: 3rem;
+  }
+
+  .contact-item {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+  }
+
+  .contact-type {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.55rem;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    color: var(--steel);
+  }
+
+  .contact-value {
+    font-family: 'Cormorant Garamond', serif;
+    font-size: 1rem;
+    color: var(--cream);
+  }
+
+  /* FOOTER */
+  footer {
+    border-top: 1px solid rgba(10, 10, 10, 0.1);
+    padding: 3rem 5vw;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .footer-logo {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.65rem;
+    letter-spacing: 0.25em;
+    color: var(--steel);
+  }
+
+  .footer-copy {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.55rem;
+    letter-spacing: 0.15em;
+    color: rgba(10, 10, 10, 0.5);
+  }
+
+  /* ANIMATIONS */
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(30px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+
+  .reveal {
+    opacity: 0;
+    transform: translateY(40px);
+    transition: opacity 0.9s cubic-bezier(0.16, 1, 0.3, 1), transform 0.9s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .reveal.visible {
+    opacity: 1;
+    transform: none;
+  }
+
+  .reveal-delay-1 { transition-delay: 0.1s; }
+  .reveal-delay-2 { transition-delay: 0.22s; }
+  .reveal-delay-3 { transition-delay: 0.34s; }
+  .reveal-delay-4 { transition-delay: 0.46s; }
+
+  @media (max-width: 900px) {
+    .section-about, .section-visit { grid-template-columns: 1fr; gap: 4rem; }
+    .about-visual { height: 350px; }
+    nav .nav-links { display: none; }
+    .spaces-grid { grid-template-columns: 1fr; }
+    .space-card.featured { grid-row: auto; }
+    .section-booking { grid-template-columns: 1fr; }
+    .hero-stat:nth-child(n+3) { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<div class="cursor" id="cursor"></div>
+<div class="cursor-ring" id="cursor-ring"></div>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-bg"></div>
+  <div class="hero-grid"></div>
+
+  <nav>
+    <div class="logo">Fujitsu Sweden - Innovation<span>.</span>Center</div>
+    <ul class="nav-links">
+      <li><a href="#about">About</a></li>
+      <li><a href="#visit">Visit</a></li>
+      <li><a href="#book">Book a Tour</a></li>
+    </ul>
+  </nav>
+
+  <div class="hero-content">
+    <p class="hero-eyebrow">Experience the Future — Est. 2026</p>
+    <h1 class="hero-title">
+      Where<br>
+      <em>Ideas</em><br>
+      Ignite
+    </h1>
+    <p class="hero-subtitle">
+      A living laboratory for breakthrough thinking. Our Innovation Center brings together visionaries, makers, and leaders in a space designed for transformation.
+    </p>
+    <div class="hero-cta">
+      <a href="#book" class="btn-primary">
+        <span>Schedule a Visit</span>
+        <span class="arrow">→</span>
+      </a>
+    </div>
+  </div>
+
+  <div class="hero-number">01</div>
+
+  <div class="hero-footer">
+    <div class="hero-stat">
+      <div class="stat-value">48K</div>
+      <div class="stat-label">Sq ft of Innovation Space</div>
+    </div>
+    <div class="hero-stat">
+      <div class="stat-value">200+</div>
+      <div class="stat-label">Events Annually</div>
+    </div>
+    <div class="hero-stat">
+      <div class="stat-value">12</div>
+      <div class="stat-label">Distinct Environments</div>
+    </div>
+    <div class="scroll-hint">
+      <div class="scroll-line"></div>
+      Scroll
+    </div>
+  </div>
+</section>
+
+<!-- ABOUT -->
+<section class="section-about" id="about">
+  <div class="about-visual reveal">
+    <div class="about-frame"></div>
+    <div class="about-frame-inner">
+      <div class="about-grid"></div>
+      <div class="about-accent"></div>
+      <div class="visual-number">IC</div>
+    </div>
+  </div>
+  <div class="about-text">
+    <h2 class="reveal">A Space Built for <em>Uncommon</em> Thinking</h2>
+    <div class="divider reveal reveal-delay-1"></div>
+    <p class="reveal reveal-delay-1">The Innovation Center is more than a facility — it's a curated ecosystem where human ingenuity meets state-of-the-art infrastructure. Every corner has been designed to provoke, inspire, and enable the kind of thinking that changes industries.</p>
+    <p class="reveal reveal-delay-2">Whether you're a startup founder looking to test a concept, a corporate team running a design sprint, or a researcher seeking collaborative space, our center adapts to your ambitions.</p>
+    <ul class="feature-list reveal reveal-delay-3">
+      <li>Advanced prototyping & fabrication labs</li>
+      <li>Immersive presentation theatres</li>
+      <li>High-velocity collaboration zones</li>
+      <li>Executive briefing suites</li>
+      <li>Open ideation studios</li>
+    </ul>
+  </div>
+</section>
+
+<!-- SPACES -->
+<section class="section-spaces" id="spaces">
+  <div class="section-header reveal">
+    <h2>Our<br>Spaces</h2>
+    <div class="section-count">06 environments</div>
+  </div>
+
+  <div class="spaces-grid">
+    <div class="space-card featured reveal">
+      <div class="space-card-number">01</div>
+      <div class="space-card-bg-text">LAB</div>
+      <div class="space-tag">★ Flagship</div>
+      <h3>The Foundry</h3>
+      <p>Our 12,000 sq ft fabrication and prototyping powerhouse. 3D printers, laser cutters, electronics workbenches, and a dedicated robotics bay — all in one electrifying environment.</p>
+    </div>
+    <div class="space-card reveal reveal-delay-1">
+      <div class="space-card-number">02</div>
+      <div class="space-card-bg-text">TH</div>
+      <div class="space-tag">200 Seats</div>
+      <h3>Amphitheatre</h3>
+      <p>World-class presentation venue with broadcast-quality AV systems, perfect for product launches and keynotes.</p>
+    </div>
+    <div class="space-card reveal reveal-delay-2">
+      <div class="space-card-number">03</div>
+      <div class="space-card-bg-text">VR</div>
+      <div class="space-tag">Immersive</div>
+      <h3>XR Studio</h3>
+      <p>Extended reality suites for virtual product demos, training simulations, and spatial computing experiments.</p>
+    </div>
+    <div class="space-card reveal reveal-delay-1">
+      <div class="space-card-number">04</div>
+      <div class="space-card-bg-text">CO</div>
+      <div class="space-tag">Collaborative</div>
+      <h3>War Rooms</h3>
+      <p>Six high-intensity sprinting rooms equipped with floor-to-ceiling whiteboards and digital canvas systems.</p>
+    </div>
+    <div class="space-card reveal reveal-delay-2">
+      <div class="space-card-number">05</div>
+      <div class="space-card-bg-text">EX</div>
+      <div class="space-tag">Private</div>
+      <h3>Exec Suite</h3>
+      <p>An intimate briefing environment for strategic conversations, client showcases, and leadership workshops.</p>
+    </div>
+  </div>
+</section>
+
+<!-- VISIT INFO -->
+<section class="section-visit" id="visit">
+  <div class="visit-col">
+    <h2 class="reveal">Plan<br>Your<br>Visit</h2>
+    <div class="info-block reveal reveal-delay-1">
+      <div class="info-label">Location</div>
+      <div class="info-value">Fujitsu Sweden<br>Sveavägen 167<br>113 46 Stockholm</div>
+    </div>
+    <div class="info-block reveal reveal-delay-2">
+      <div class="info-label">Hours</div>
+      <div class="schedule-grid">
+        <div class="schedule-item">
+          <div class="schedule-day">Opening Hours</div>
+          <div class="schedule-time">Only Reservations</div>
+        </div>
+        <div class="schedule-item">
+          <div class="schedule-day">More Info</div>
+          <div class="schedule-time"><a href="#book" class="btn-ghost">See Booking</a></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="visit-col">
+    <h2 class="reveal">Access &amp;<br>Transport</h2>
+    <div class="info-block reveal reveal-delay-1">
+      <div class="info-label">Public Transit</div>
+      <div class="info-value">BART: Embarcadero Station (5 min walk)<br>Muni: Lines 1, 8, 14 stop at Apex Blvd</div>
+    </div>
+    <div class="info-block reveal reveal-delay-2">
+      <div class="info-label">Parking</div>
+      <div class="info-value">Validated parking available in the Tower 7 garage. Enter via Mission St. Complimentary for tours and events.</div>
+    </div>
+    <div class="info-block reveal reveal-delay-3">
+      <div class="info-label">Accessibility</div>
+      <div class="info-value">Fully ADA compliant. Dedicated accessible parking, ramps, elevators, and assisted listening devices available throughout.</div>
+    </div>
+  </div>
+</section>
+
+<!-- BOOKING CTA -->
+<div class="section-booking reveal" id="book">
+  <div class="booking-text">
+    <h2>Ready to see the future <em>firsthand?</em></h2>
+    <p>Join the growing community of innovators who've been inspired within our walls. Book a guided tour, schedule a demo day, or plan your next off-site — we'll make it extraordinary.</p>
+    <div class="contact-strip">
+      <div class="contact-item">
+        <span class="contact-type">Email</span>
+        <span class="contact-value">visit@innovationcenter.com</span>
+      </div>
+      <div class="contact-item">
+        <span class="contact-type">Phone</span>
+        <span class="contact-value">+1 (415) 000-0000</span>
+      </div>
+    </div>
+  </div>
+  <div class="booking-actions">
+    <a href="#" class="btn-primary"><span>Book a Tour</span><span class="arrow">→</span></a>
+    <a href="#" class="btn-ghost" style="text-align:center;">Download Brochure</a>
+  </div>
+</div>
+
+<footer>
+  <div class="footer-logo">Fujitsu<span style="color:var(--rust)">.</span>Sweden</div>
+  <div class="footer-copy">© 2026 Fujitsu Sweden. All rights reserved.</div>
+</footer>
+
+<script>
+  // Custom cursor
+  const cursor = document.getElementById('cursor');
+  const ring = document.getElementById('cursor-ring');
+  let mx = 0, my = 0, rx = 0, ry = 0;
+
+  document.addEventListener('mousemove', e => {
+    mx = e.clientX; my = e.clientY;
+    cursor.style.left = mx + 'px';
+    cursor.style.top = my + 'px';
+  });
+
+  function animateRing() {
+    rx += (mx - rx) * 0.1;
+    ry += (my - ry) * 0.1;
+    ring.style.left = rx + 'px';
+    ring.style.top = ry + 'px';
+    requestAnimationFrame(animateRing);
+  }
+  animateRing();
+
+  document.querySelectorAll('a, button').forEach(el => {
+    el.addEventListener('mouseenter', () => {
+      cursor.style.width = '20px';
+      cursor.style.height = '20px';
+      ring.style.width = '60px';
+      ring.style.height = '60px';
+    });
+    el.addEventListener('mouseleave', () => {
+      cursor.style.width = '12px';
+      cursor.style.height = '12px';
+      ring.style.width = '40px';
+      ring.style.height = '40px';
+    });
+  });
+
+  // Scroll reveal
+  const reveals = document.querySelectorAll('.reveal');
+  const observer = new IntersectionObserver(entries => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        entry.target.classList.add('visible');
+        observer.unobserve(entry.target);
+      }
+    });
+  }, { threshold: 0.12 });
+
+  reveals.forEach(el => observer.observe(el));
+</script>
+</body>
+</html>
