@@ -1557,6 +1557,12 @@
       if (isModalOpen) return;
       if (e.target.matches('button, a, input, textarea') && e.target.onclick) return;
       
+      // Reset laser trail and effects from click point
+      trail = [];
+      particles = [];
+      mouse.x = e.clientX;
+      mouse.y = e.clientY;
+      
       createTouchSparks(e.clientX, e.clientY);
     });
   }
