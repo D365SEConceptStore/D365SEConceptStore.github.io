@@ -1341,6 +1341,23 @@
   // Enhanced laser pointer effect with particles
   const canvas = document.getElementById('laser-canvas');
   const ctx = canvas.getContext('2d');
+  
+  console.log('✅ Canvas element:', canvas);
+  console.log('✅ Canvas context:', ctx);
+  console.log('✅ Canvas size:', canvas.width, 'x', canvas.height);
+
+  // Detect if device is touch-enabled
+  const isTouchDevice = () => {
+    // Most reliable: check if device CANNOT hover (true indicator of touch-only device)
+    // Hybrid devices (touchscreen + mouse) will have hover: any
+    const cannotHover = window.matchMedia('(hover: none)').matches;
+    
+    console.log('📱 Touch detection - cannotHover:', cannotHover);
+    return cannotHover;
+  };
+  
+  const isTouch = isTouchDevice();
+  console.log('🎯 Device Type:', isTouch ? 'TOUCH DEVICE (laser disabled)' : 'DESKTOP WITH MOUSE (laser enabled)');
 
   function resize() {
     canvas.width = window.innerWidth;
@@ -1356,44 +1373,57 @@
   const PARTICLE_COUNT = 3;
   let frameCount = 0;
 
-  document.addEventListener('mousemove', e => {
-    if (isModalOpen) return;
-    
-    const prevX = mouse.x;
-    const prevY = mouse.y;
-    mouse.x = e.clientX;
-    mouse.y = e.clientY;
-    mouse.vx = mouse.x - prevX;
-    mouse.vy = mouse.y - prevY;
-    
-    trail.push({ x: e.clientX, y: e.clientY, age: 0, vx: mouse.vx, vy: mouse.vy });
-    if (trail.length > MAX_TRAIL) trail.shift();
-    
-    // Create particles
-    if (frameCount % 2 === 0) {
-      for (let i = 0; i < PARTICLE_COUNT; i++) {
-        const angle = Math.random() * Math.PI * 2;
-        const speed = 1 + Math.random() * 2;
-        particles.push({
-          x: e.clientX + Math.cos(angle) * 2,
-          y: e.clientY + Math.sin(angle) * 2,
-          vx: Math.cos(angle) * speed,
-          vy: Math.sin(angle) * speed,
-          life: 1,
-          size: 0.5 + Math.random() * 1.5
-        });
+  // Only enable mousemove tracking on non-touch devices
+  if (!isTouch) {
+    console.log('🖱️ Attaching mousemove listener...');
+    document.addEventListener('mousemove', e => {
+      if (isModalOpen) return;
+      
+      const prevX = mouse.x;
+      const prevY = mouse.y;
+      mouse.x = e.clientX;
+      mouse.y = e.clientY;
+      mouse.vx = mouse.x - prevX;
+      mouse.vy = mouse.y - prevY;
+      
+      trail.push({ x: e.clientX, y: e.clientY, age: 0, vx: mouse.vx, vy: mouse.vy });
+      if (trail.length > MAX_TRAIL) trail.shift();
+      
+      // Create particles
+      if (frameCount % 2 === 0) {
+        for (let i = 0; i < PARTICLE_COUNT; i++) {
+          const angle = Math.random() * Math.PI * 2;
+          const speed = 1 + Math.random() * 2;
+          particles.push({
+            x: e.clientX + Math.cos(angle) * 2,
+            y: e.clientY + Math.sin(angle) * 2,
+            vx: Math.cos(angle) * speed,
+            vy: Math.sin(angle) * speed,
+            life: 1,
+            size: 0.5 + Math.random() * 1.5
+          });
+        }
       }
-    }
-  });
+    });
+  } else {
+    console.log('⛔ Mousemove listener SKIPPED (touch device detected)');
+  }
 
   function draw() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     frameCount++;
 
-    // Skip drawing laser effects when modal is open
-    if (isModalOpen) {
+    // Skip all laser effects on touch devices or when modal is open
+    if (isTouch || isModalOpen) {
+      if (frameCount === 1) {
+        console.log('⚠️ Draw skipping - isTouch:', isTouch, 'isModalOpen:', isModalOpen);
+      }
       requestAnimationFrame(draw);
       return;
+    }
+    
+    if (frameCount % 60 === 0) {
+      console.log('🎨 Drawing frame', frameCount, '- Trail length:', trail.length, '- Mouse:', mouse.x, mouse.y);
     }
 
     // Draw glowing trail with enhanced effect
@@ -1513,21 +1543,23 @@
     observer.observe(el);
   });
 
-  // Touch sparks effect
-  document.addEventListener('touchstart', (e) => {
-    if (isModalOpen) return;
-    
-    for (let touch of e.touches) {
-      createTouchSparks(touch.clientX, touch.clientY);
-    }
-  }, { passive: true });
+  // Particle effects (desktop only)
+  if (!isTouch) {
+    document.addEventListener('touchstart', (e) => {
+      if (isModalOpen) return;
+      
+      for (let touch of e.touches) {
+        createTouchSparks(touch.clientX, touch.clientY);
+      }
+    }, { passive: true });
 
-  document.addEventListener('click', (e) => {
-    if (isModalOpen) return;
-    if (e.target.matches('button, a, input, textarea') && e.target.onclick) return;
-    
-    createTouchSparks(e.clientX, e.clientY);
-  });
+    document.addEventListener('click', (e) => {
+      if (isModalOpen) return;
+      if (e.target.matches('button, a, input, textarea') && e.target.onclick) return;
+      
+      createTouchSparks(e.clientX, e.clientY);
+    });
+  }
 
   function createTouchSparks(x, y) {
     const sparkCount = 12;
