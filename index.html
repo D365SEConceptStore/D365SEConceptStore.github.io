@@ -1347,16 +1347,21 @@
   console.log('✅ Canvas size:', canvas.width, 'x', canvas.height);
 
   // Detect if device is touch-enabled
-  const isTouchDevice = () => {
-    // Most reliable: check if device CANNOT hover (true indicator of touch-only device)
-    // Hybrid devices (touchscreen + mouse) will have hover: any
-    const cannotHover = window.matchMedia('(hover: none)').matches;
-    
-    console.log('📱 Touch detection - cannotHover:', cannotHover);
-    return cannotHover;
-  };
+  let isTouch = false;
   
-  const isTouch = isTouchDevice();
+  // Primary detection: check hover capability
+  const cannotHover = window.matchMedia('(hover: none)').matches;
+  if (cannotHover) {
+    isTouch = true;
+    console.log('📱 Touch detection - cannotHover: true');
+  }
+  
+  // Fallback: detect actual touch events
+  document.addEventListener('touchstart', () => {
+    isTouch = true;
+    console.log('📱 Touch detected via touchstart event');
+  }, { once: true, passive: true });
+  
   console.log('🎯 Device Type:', isTouch ? 'TOUCH DEVICE (laser disabled)' : 'DESKTOP WITH MOUSE (laser enabled)');
 
   function resize() {
