@@ -396,7 +396,7 @@
 <div class="punchout-banner">
   <div class="dot"></div>
   <span>PunchOut session active — connected from <strong>Dynamics 365 SCM</strong></span>
-  <span class="buyer-id">BuyerCookie: D365-SESS-2024-08491</span>
+  <span class="buyer-id">BuyerCookie: <span id="bannerCookie">—</span></span>
 </div>
 
 <!-- Header -->
@@ -679,11 +679,25 @@ function closeCheckout() {
   openCart();
 }
 function confirmReturn() {
-  document.getElementById('checkoutModal').classList.remove('open');
-  document.getElementById('successModal').classList.add('open');
-  cart = {};
-  updateCartUI();
-  renderProducts(products);
+  const items = Object.values(cart);
+  const xml = generateCXML(items);
+  const returnUrl = SESSION.returnUrl;
+
+  if (!returnUrl || returnUrl === 'MISSING') {
+    alert('No return URL in session. Was this opened via a real PunchOut session from D365?');
+    return;
+  }
+
+  // Build auto-submitting form that POSTs cXML back to D365
+  const newWin = window.open('', '_self');
+  newWin.document.write(`<!DOCTYPE html><html><body>
+    <p style="font-family:sans-serif;padding:40px;font-size:16px;">Returning to Dynamics 365 SCM...</p>
+    <form id="punchoutForm" method="POST" action="${returnUrl}" enctype="application/x-www-form-urlencoded">
+      <input type="hidden" name="cXML-urlencoded" value="${encodeURIComponent(xml)}">
+    </form>
+    <script>document.getElementById('punchoutForm').submit();<\/script>
+  </body></html>`);
+  newWin.document.close();
 }
 
 function generateCXML(items) {
@@ -719,20 +733,20 @@ function generateCXML(items) {
     </From>
     <To>
       <Credential domain="DUNS">
-        <Identity>BUYER-D365-CORP</Identity>
+        <Identity>${SESSION.buyerIdentity}</Identity>
       </Credential>
     </To>
     <Sender>
       <Credential domain="supplydirect.com">
         <Identity>supplydirect-cxml</Identity>
-        <SharedSecret>SuperZuccini2026</SharedSecret>
+        <SharedSecret>••••••••</SharedSecret>
       </Credential>
       <UserAgent>SupplyDirect PunchOut v2.1</UserAgent>
     </Sender>
   </Header>
   <Message>
     <PunchOutOrderMessage>
-      <BuyerCookie>D365-SESS-2024-08491</BuyerCookie>
+      <BuyerCookie>${SESSION.buyerCookie}</BuyerCookie>
       <PunchOutOrderMessageHeader operationAllowed="create">
         <Total>
           <Money currency="USD">${total.toFixed(2)}</Money>
@@ -741,6 +755,23 @@ function generateCXML(items) {
     </PunchOutOrderMessage>
   </Message>
 </cXML>`;
+}
+
+// ── Session bootstrap ─────────────────────────────────────────────────────
+// Power Automate redirects here with ?cookie=XXX&returnUrl=XXX
+const _params = new URLSearchParams(window.location.search);
+const SESSION = {
+  buyerCookie   : decodeURIComponent(_params.get('cookie')    || 'MISSING'),
+  returnUrl     : decodeURIComponent(_params.get('returnUrl') || 'MISSING'),
+  buyerIdentity : 'usrt'
+};
+
+// Update banner with real BuyerCookie
+const _bc = document.getElementById('bannerCookie');
+if (_bc) _bc.textContent = SESSION.buyerCookie;
+
+if (SESSION.buyerCookie === 'MISSING') {
+  console.warn('[PunchOut] No ?cookie= param — session not initiated from D365.');
 }
 
 // initial render
