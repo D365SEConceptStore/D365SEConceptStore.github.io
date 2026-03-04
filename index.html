@@ -3,409 +3,749 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Store Ops — PowerApps Header Reference</title>
-<link href="https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600;700&display=swap" rel="stylesheet">
+<title>SupplyDirect — PunchOut Catalog</title>
 <style>
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  @import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&display=swap');
 
   :root {
-    --brand:       #c8313d;
-    --brand-light: #fdf0f1;
-    --brand-mid:   rgba(200,49,61,0.08);
-    --white:       #ffffff;
-    --bg:          #f3f4f6;
-    --border:      #e1e4e8;
-    --text-1:      #1f2328;
-    --text-2:      #57606a;
-    --text-3:      #adb5bd;
-    --green:       #1a7f37;
-    --green-bg:    #dafbe1;
-    --amber:       #9a6700;
-    --amber-bg:    #fff8c5;
-    --red-bg:      #ffd8d8;
+    --ink: #0f1117;
+    --paper: #f5f3ef;
+    --cream: #ede9e1;
+    --accent: #c84b1f;
+    --accent-light: #f4e8e3;
+    --steel: #4a5568;
+    --rule: #d6d0c4;
+    --success: #1a6644;
+    --badge: #e8f4ee;
   }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
   body {
-    background: var(--bg);
-    font-family: 'Segoe UI', Segoe UI, sans-serif;
-    color: var(--text-1);
+    font-family: 'DM Sans', sans-serif;
+    background: var(--paper);
+    color: var(--ink);
     min-height: 100vh;
+    font-size: 14px;
   }
 
-  /* ── HEADER BAR ── */
-  .pa-header {
-    background: var(--brand);
-    height: 64px;
+  /* ── TOP BANNER ─────────────────────────────── */
+  .punchout-banner {
+    background: var(--ink);
+    color: #fff;
+    padding: 9px 24px;
     display: flex;
     align-items: center;
-    padding: 0 20px;
-    gap: 14px;
+    gap: 10px;
+    font-size: 12px;
+    letter-spacing: .03em;
   }
+  .punchout-banner .dot { width: 8px; height: 8px; border-radius: 50%; background: #4ade80; flex-shrink: 0; animation: pulse 2s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+  .punchout-banner strong { color: #a3e4b5; }
+  .punchout-banner .buyer-id { margin-left: auto; color: #9ca3af; font-family: 'DM Sans', monospace; }
 
-  .logo-icon {
-    width: 38px; height: 38px;
+  /* ── HEADER ─────────────────────────────────── */
+  header {
     background: #fff;
-    border-radius: 7px;
-    display: flex; align-items: center; justify-content: center;
-    flex-shrink: 0;
+    border-bottom: 1px solid var(--rule);
+    padding: 0 32px;
+    display: flex;
+    align-items: center;
+    gap: 24px;
+    height: 64px;
   }
-  .logo-icon svg { width: 22px; height: 22px; }
-
-  .app-title { display: flex; flex-direction: column; line-height: 1.2; flex-shrink: 0; }
-  .app-title-main { font-size: 15px; font-weight: 700; color: #fff; }
-  .app-title-sub  { font-size: 10px; color: rgba(255,255,255,0.72); letter-spacing: 0.08em; text-transform: uppercase; }
-
-  .v-sep { width: 1px; height: 28px; background: rgba(255,255,255,0.28); flex-shrink: 0; }
-
-  .store-btn {
-    display: flex; align-items: center; gap: 8px;
-    padding: 7px 12px;
-    background: rgba(255,255,255,0.14);
-    border: 1.5px solid rgba(255,255,255,0.32);
+  .logo {
+    font-family: 'DM Serif Display', serif;
+    font-size: 22px;
+    color: var(--ink);
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .logo-mark {
+    width: 32px; height: 32px;
+    background: var(--accent);
     border-radius: 6px;
+    display: grid;
+    place-items: center;
+  }
+  .logo-mark svg { width: 18px; height: 18px; fill: #fff; }
+  .search-bar {
+    flex: 1;
+    max-width: 420px;
+    margin-left: 16px;
+    display: flex;
+    border: 1.5px solid var(--rule);
+    border-radius: 8px;
+    overflow: hidden;
+    background: var(--paper);
+  }
+  .search-bar input {
+    flex: 1;
+    border: none;
+    background: transparent;
+    padding: 9px 14px;
+    font-family: inherit;
+    font-size: 13px;
+    outline: none;
+    color: var(--ink);
+  }
+  .search-bar button {
+    padding: 0 14px;
+    background: var(--ink);
+    border: none;
+    cursor: pointer;
+    color: #fff;
+    font-size: 13px;
+  }
+  .cart-btn {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    padding: 9px 18px;
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 600;
     cursor: pointer;
     transition: background .15s;
-    flex-shrink: 0;
-  }
-  .store-btn:hover { background: rgba(255,255,255,0.24); }
-  .store-dot { width: 7px; height: 7px; border-radius: 50%; background: #4ade80; flex-shrink: 0; }
-  .store-btn-text { display: flex; flex-direction: column; line-height: 1.2; }
-  .store-btn-name { font-size: 12px; font-weight: 600; color: #fff; }
-  .store-btn-loc  { font-size: 10px; color: rgba(255,255,255,0.68); }
-  .store-caret    { font-size: 10px; color: rgba(255,255,255,0.6); margin-left: 2px; }
-
-  .search-wrap {
-    flex: 1; max-width: 340px;
-    display: flex; align-items: center; gap: 8px;
-    height: 36px;
-    background: #fff;
-    border-radius: 6px;
-    padding: 0 12px;
-  }
-  .search-wrap svg { width: 14px; height: 14px; color: var(--text-3); flex-shrink: 0; }
-  .search-wrap input {
-    flex: 1; border: none; outline: none;
-    font-family: 'Segoe UI', sans-serif;
-    font-size: 13px; color: var(--text-1);
-    background: transparent;
-  }
-  .search-wrap input::placeholder { color: var(--text-3); }
-
-  .spacer { flex: 1; }
-
-  .hdr-icons { display: flex; align-items: center; gap: 4px; }
-  .hdr-icon-btn {
     position: relative;
-    width: 36px; height: 36px; border-radius: 6px;
-    background: rgba(255,255,255,0.12);
-    border: 1px solid rgba(255,255,255,0.22);
-    display: flex; align-items: center; justify-content: center;
-    cursor: pointer; transition: background .15s;
-    font-size: 16px;
   }
-  .hdr-icon-btn:hover { background: rgba(255,255,255,0.24); }
-  .notif-dot {
-    position: absolute; top: 6px; right: 6px;
-    width: 8px; height: 8px;
-    background: #fbbf24; border-radius: 50%;
-    border: 2px solid var(--brand);
-  }
-
-  .avatar-wrap {
-    display: flex; align-items: center; gap: 9px;
-    margin-left: 6px; cursor: pointer;
-  }
-  .avatar-circle {
-    width: 34px; height: 34px; border-radius: 50%;
-    background: #fff; border: 2px solid rgba(255,255,255,0.55);
-    display: flex; align-items: center; justify-content: center;
-    font-size: 12px; font-weight: 700; color: var(--brand);
-  }
-  .avatar-info { display: flex; flex-direction: column; line-height: 1.2; }
-  .avatar-name { font-size: 12px; font-weight: 600; color: #fff; }
-  .avatar-role { font-size: 10px; color: rgba(255,255,255,0.68); }
-
-  /* ── NAV BAR ── */
-  .pa-nav {
+  .cart-btn:hover { background: #a83a10; }
+  .cart-count {
     background: #fff;
-    border-bottom: 1.5px solid var(--border);
-    height: 48px;
-    display: flex; align-items: stretch;
-    padding: 0 16px; gap: 2px;
-    overflow-x: auto; scrollbar-width: none;
-  }
-  .pa-nav::-webkit-scrollbar { display: none; }
-
-  .nav-item {
-    display: flex; align-items: center; gap: 7px;
-    padding: 0 16px;
-    font-size: 13px; font-weight: 500;
-    color: var(--text-2);
-    cursor: pointer; white-space: nowrap;
-    position: relative;
-    transition: color .15s, background .15s;
-    user-select: none;
-  }
-  .nav-item:hover { color: var(--brand); background: var(--brand-light); }
-  .nav-item.active { color: var(--brand); background: var(--brand-light); font-weight: 600; }
-  .nav-item.active::after {
-    content: '';
-    position: absolute; bottom: -1.5px; left: 0; right: 0;
-    height: 2.5px; background: var(--brand);
-  }
-  .nav-icon { font-size: 15px; }
-  .nav-badge {
-    display: inline-flex; align-items: center; justify-content: center;
-    min-width: 18px; height: 18px; padding: 0 5px;
-    background: var(--brand); color: #fff;
-    font-size: 10px; font-weight: 700; border-radius: 20px;
+    color: var(--accent);
+    border-radius: 99px;
+    width: 20px; height: 20px;
+    font-size: 11px;
+    font-weight: 700;
+    display: grid;
+    place-items: center;
   }
 
-  /* ── KPI STRIP ── */
-  .kpi-strip {
+  /* ── NAV ─────────────────────────────────────── */
+  nav {
+    background: var(--cream);
+    border-bottom: 1px solid var(--rule);
+    padding: 0 32px;
+    display: flex;
+    gap: 0;
+    overflow-x: auto;
+  }
+  nav a {
+    text-decoration: none;
+    color: var(--steel);
+    font-size: 13px;
+    font-weight: 500;
+    padding: 12px 16px;
+    border-bottom: 2px solid transparent;
+    white-space: nowrap;
+    transition: color .15s, border-color .15s;
+  }
+  nav a:hover, nav a.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+  /* ── LAYOUT ──────────────────────────────────── */
+  .layout { display: flex; max-width: 1200px; margin: 0 auto; padding: 28px 24px; gap: 28px; }
+
+  /* ── SIDEBAR ─────────────────────────────────── */
+  aside { width: 200px; flex-shrink: 0; }
+  .filter-section { margin-bottom: 24px; }
+  .filter-title { font-size: 11px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; color: var(--steel); margin-bottom: 10px; }
+  .filter-option { display: flex; align-items: center; gap: 8px; margin-bottom: 7px; cursor: pointer; font-size: 13px; }
+  .filter-option input[type=checkbox] { accent-color: var(--accent); width: 14px; height: 14px; }
+  .price-range { display: flex; flex-direction: column; gap: 8px; }
+  .price-range input[type=range] { accent-color: var(--accent); width: 100%; }
+  .price-labels { display: flex; justify-content: space-between; font-size: 12px; color: var(--steel); }
+
+  /* ── PRODUCT GRID ────────────────────────────── */
+  .grid-area { flex: 1; }
+  .grid-toolbar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px; }
+  .grid-toolbar span { font-size: 13px; color: var(--steel); }
+  .sort-select { border: 1px solid var(--rule); border-radius: 6px; padding: 6px 10px; font-family: inherit; font-size: 13px; background: #fff; color: var(--ink); outline: none; cursor: pointer; }
+  .product-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 16px; }
+
+  .product-card {
     background: #fff;
-    border-bottom: 1px solid var(--border);
-    display: flex; align-items: center;
-    padding: 10px 20px; gap: 0;
-    overflow-x: auto; scrollbar-width: none;
-  }
-  .kpi-strip::-webkit-scrollbar { display: none; }
-
-  .kpi-card {
-    display: flex; align-items: center; gap: 10px;
-    padding: 4px 24px 4px 0; margin-right: 24px;
-    border-right: 1px solid var(--border); flex-shrink: 0;
-  }
-  .kpi-card:last-child { border-right: none; margin-right: 0; }
-  .kpi-icon-box {
-    width: 36px; height: 36px; border-radius: 8px;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 16px; flex-shrink: 0;
-  }
-  .kpi-body { display: flex; flex-direction: column; line-height: 1.25; }
-  .kpi-value { font-size: 17px; font-weight: 700; color: var(--text-1); }
-  .kpi-label { font-size: 10px; color: var(--text-2); text-transform: uppercase; letter-spacing: 0.07em; font-weight: 500; }
-  .kpi-delta {
-    font-size: 10px; font-weight: 700;
-    padding: 3px 7px; border-radius: 20px; align-self: center; margin-left: 2px;
-  }
-  .up   { background: var(--green-bg); color: var(--green); }
-  .warn { background: var(--amber-bg); color: var(--amber); }
-  .down { background: var(--red-bg);   color: #c0152b; }
-
-  /* ── PAGE PLACEHOLDER ── */
-  .page-body {
-    padding: 32px 20px;
-    display: flex; flex-direction: column; align-items: center; gap: 8px;
-  }
-  .screen-label { font-size: 22px; font-weight: 700; color: var(--brand); opacity: 0.15; letter-spacing: 0.04em; }
-  .page-hint    { font-size: 11px; color: var(--text-3); text-transform: uppercase; letter-spacing: 0.1em; font-weight: 600; }
-
-  /* ── SPEC TABLE ── */
-  .spec-panel {
-    margin: 8px 20px 32px;
-    background: #fff;
-    border: 1px solid var(--border);
+    border: 1px solid var(--rule);
     border-radius: 10px;
     overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    transition: box-shadow .2s, transform .2s;
+    cursor: default;
   }
-  .spec-title {
-    background: var(--brand); color: #fff;
-    font-size: 11px; font-weight: 700;
-    letter-spacing: 0.1em; text-transform: uppercase;
-    padding: 10px 16px;
+  .product-card:hover { box-shadow: 0 6px 24px rgba(0,0,0,.09); transform: translateY(-2px); }
+  .product-img {
+    background: var(--cream);
+    height: 150px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 52px;
+    border-bottom: 1px solid var(--rule);
+    position: relative;
   }
-  .spec-table { width: 100%; border-collapse: collapse; font-size: 12px; }
-  .spec-table th {
-    text-align: left; padding: 8px 14px;
-    background: #f9fafb;
-    color: var(--text-2); font-weight: 700;
-    font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em;
-    border-bottom: 1px solid var(--border);
+  .product-img .badge {
+    position: absolute;
+    top: 10px; left: 10px;
+    background: var(--badge);
+    color: var(--success);
+    font-size: 10px;
+    font-weight: 600;
+    padding: 2px 7px;
+    border-radius: 4px;
+    letter-spacing: .04em;
   }
-  .spec-table td {
-    padding: 8px 14px;
-    border-bottom: 1px solid #f0f1f4;
-    color: var(--text-1); vertical-align: top;
+  .product-body { padding: 14px; flex: 1; display: flex; flex-direction: column; gap: 6px; }
+  .product-sku { font-size: 10px; color: var(--steel); letter-spacing: .06em; text-transform: uppercase; }
+  .product-name { font-size: 14px; font-weight: 600; line-height: 1.35; color: var(--ink); }
+  .product-desc { font-size: 12px; color: var(--steel); line-height: 1.5; flex: 1; }
+  .product-foot { padding: 10px 14px 14px; display: flex; align-items: center; justify-content: space-between; }
+  .product-price { font-family: 'DM Serif Display', serif; font-size: 20px; color: var(--ink); }
+  .product-uom { font-size: 11px; color: var(--steel); margin-top: 1px; }
+  .add-btn {
+    background: var(--ink);
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    padding: 7px 13px;
+    font-family: inherit;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background .15s, transform .1s;
+    display: flex; align-items: center; gap: 5px;
   }
-  .spec-table tr:last-child td { border-bottom: none; }
-  .spec-table td:first-child { font-weight: 600; color: var(--text-2); width: 160px; white-space: nowrap; }
-  code {
-    background: #f3f4f6; color: var(--brand);
-    padding: 2px 6px; border-radius: 4px;
-    font-size: 11px; font-family: 'Consolas', monospace;
-  }
+  .add-btn:hover { background: var(--accent); }
+  .add-btn:active { transform: scale(.96); }
+  .add-btn.added { background: var(--success); }
 
-  @keyframes fadeIn { from { opacity:0; transform:translateY(-5px); } to { opacity:1; transform:none; } }
-  .pa-header { animation: fadeIn .3s ease both; }
-  .pa-nav    { animation: fadeIn .3s .07s ease both; }
-  .kpi-strip { animation: fadeIn .3s .14s ease both; }
+  /* ── CART PANEL ──────────────────────────────── */
+  .cart-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,.35);
+    z-index: 100;
+    display: none;
+    opacity: 0;
+    transition: opacity .2s;
+  }
+  .cart-overlay.open { display: block; opacity: 1; }
+  .cart-panel {
+    position: fixed;
+    top: 0; right: 0; bottom: 0;
+    width: 400px;
+    background: #fff;
+    z-index: 101;
+    display: flex;
+    flex-direction: column;
+    transform: translateX(100%);
+    transition: transform .25s cubic-bezier(.4,0,.2,1);
+    box-shadow: -8px 0 32px rgba(0,0,0,.12);
+  }
+  .cart-panel.open { transform: translateX(0); }
+  .cart-header {
+    padding: 20px 24px;
+    border-bottom: 1px solid var(--rule);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .cart-header h2 { font-family: 'DM Serif Display', serif; font-size: 20px; }
+  .close-btn { background: none; border: none; font-size: 22px; cursor: pointer; color: var(--steel); line-height: 1; }
+  .cart-items { flex: 1; overflow-y: auto; padding: 16px 24px; display: flex; flex-direction: column; gap: 14px; }
+  .cart-empty { text-align: center; color: var(--steel); padding: 48px 0; font-size: 13px; }
+  .cart-empty .empty-icon { font-size: 40px; margin-bottom: 10px; }
+  .cart-item {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+    padding-bottom: 14px;
+    border-bottom: 1px solid var(--rule);
+  }
+  .cart-item-icon { font-size: 28px; flex-shrink: 0; background: var(--cream); border-radius: 6px; width: 44px; height: 44px; display: grid; place-items: center; }
+  .cart-item-info { flex: 1; }
+  .cart-item-name { font-weight: 600; font-size: 13px; }
+  .cart-item-sku { font-size: 11px; color: var(--steel); margin-top: 2px; }
+  .cart-item-meta { display: flex; align-items: center; gap: 10px; margin-top: 6px; }
+  .qty-control { display: flex; align-items: center; gap: 6px; }
+  .qty-btn { width: 24px; height: 24px; border: 1px solid var(--rule); border-radius: 4px; background: #fff; cursor: pointer; font-size: 14px; display: grid; place-items: center; }
+  .qty-btn:hover { background: var(--cream); }
+  .qty-val { font-size: 13px; font-weight: 600; min-width: 20px; text-align: center; }
+  .cart-item-price { font-family: 'DM Serif Display', serif; font-size: 16px; margin-left: auto; }
+  .remove-item { background: none; border: none; font-size: 18px; color: #ccc; cursor: pointer; padding: 0; }
+  .remove-item:hover { color: var(--accent); }
+  .cart-footer {
+    padding: 20px 24px;
+    border-top: 1px solid var(--rule);
+  }
+  .cart-totals { margin-bottom: 16px; }
+  .cart-row { display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 6px; color: var(--steel); }
+  .cart-row.total { font-size: 16px; font-weight: 700; color: var(--ink); margin-top: 10px; border-top: 1px solid var(--rule); padding-top: 10px; }
+  .checkout-btn {
+    width: 100%;
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    padding: 13px;
+    font-family: inherit;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background .15s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+  }
+  .checkout-btn:hover { background: #a83a10; }
+  .cxml-note { font-size: 11px; color: var(--steel); text-align: center; margin-top: 10px; line-height: 1.5; }
+
+  /* ── CHECKOUT MODAL ──────────────────────────── */
+  .modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,.5);
+    z-index: 200;
+    display: none;
+    place-items: center;
+  }
+  .modal-overlay.open { display: grid; }
+  .modal {
+    background: #fff;
+    border-radius: 14px;
+    width: 520px;
+    max-width: 95vw;
+    overflow: hidden;
+    animation: slideUp .3s cubic-bezier(.4,0,.2,1);
+  }
+  @keyframes slideUp { from{transform:translateY(30px);opacity:0} to{transform:translateY(0);opacity:1} }
+  .modal-head {
+    padding: 22px 28px;
+    border-bottom: 1px solid var(--rule);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .modal-head .icon { font-size: 24px; }
+  .modal-head h3 { font-family: 'DM Serif Display', serif; font-size: 20px; }
+  .modal-head p { font-size: 12px; color: var(--steel); }
+  .modal-body { padding: 22px 28px; }
+  .cxml-block {
+    background: var(--ink);
+    color: #a3e4b5;
+    font-family: 'Courier New', monospace;
+    font-size: 11px;
+    line-height: 1.6;
+    border-radius: 8px;
+    padding: 16px;
+    max-height: 260px;
+    overflow-y: auto;
+    white-space: pre;
+  }
+  .modal-body p { font-size: 13px; color: var(--steel); margin-bottom: 12px; }
+  .modal-actions { padding: 16px 28px 22px; display: flex; gap: 10px; justify-content: flex-end; }
+  .btn-secondary {
+    background: var(--cream);
+    border: 1px solid var(--rule);
+    color: var(--ink);
+    border-radius: 8px;
+    padding: 10px 20px;
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .btn-primary {
+    background: var(--success);
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    padding: 10px 20px;
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .btn-primary:hover { background: #135235; }
+
+  .status-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    background: var(--badge);
+    color: var(--success);
+    font-size: 11px;
+    font-weight: 600;
+    padding: 4px 10px;
+    border-radius: 99px;
+  }
 </style>
 </head>
 <body>
 
-<!-- ═══ HEADER BAR ═══ -->
-<header class="pa-header">
+<!-- PunchOut session banner -->
+<div class="punchout-banner">
+  <div class="dot"></div>
+  <span>PunchOut session active — connected from <strong>Dynamics 365 SCM</strong></span>
+  <span class="buyer-id">BuyerCookie: D365-SESS-2024-08491</span>
+</div>
 
-  <div class="logo-icon">
-    <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <path d="M3 10.5L12 3l9 7.5V20a1 1 0 01-1 1H4a1 1 0 01-1-1v-9.5z" fill="#c8313d"/>
-      <rect x="9" y="13" width="6" height="8" rx="1" fill="white"/>
-    </svg>
-  </div>
-
-  <div class="app-title">
-    <span class="app-title-main">OpsFlow</span>
-    <span class="app-title-sub">Store Operations</span>
-  </div>
-
-  <div class="v-sep"></div>
-
-  <div class="store-btn">
-    <div class="store-dot"></div>
-    <div class="store-btn-text">
-      <span class="store-btn-name">Central Park #04</span>
-      <span class="store-btn-loc">Manhattan, NY</span>
+<!-- Header -->
+<header>
+  <a class="logo" href="#">
+    <div class="logo-mark">
+      <svg viewBox="0 0 24 24"><path d="M20 7H4a2 2 0 00-2 2v6a2 2 0 002 2h16a2 2 0 002-2V9a2 2 0 00-2-2zm-9 5H7v-2h4v2zm6 0h-4v-2h4v2z"/></svg>
     </div>
-    <span class="store-caret">▾</span>
+    SupplyDirect
+  </a>
+  <div class="search-bar">
+    <input type="text" placeholder="Search 12,000+ products…" id="searchInput" oninput="filterProducts()">
+    <button>🔍</button>
   </div>
-
-  <div class="search-wrap">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-    <input type="text" placeholder="Search products, staff, orders…">
-  </div>
-
-  <div class="spacer"></div>
-
-  <div class="hdr-icons">
-    <div class="hdr-icon-btn">🔔<span class="notif-dot"></span></div>
-    <div class="hdr-icon-btn">💬</div>
-    <div class="hdr-icon-btn">❓</div>
-  </div>
-
-  <div class="avatar-wrap">
-    <div class="avatar-circle">JM</div>
-    <div class="avatar-info">
-      <span class="avatar-name">Jamie M.</span>
-      <span class="avatar-role">Store Manager</span>
-    </div>
-  </div>
-
+  <button class="cart-btn" onclick="openCart()">
+    🛒 Cart
+    <span class="cart-count" id="cartCount">0</span>
+  </button>
 </header>
 
-<!-- ═══ NAV BAR ═══ -->
-<nav class="pa-nav">
-  <div class="nav-item active" onclick="setActive(this)"><span class="nav-icon">📊</span>Dashboard</div>
-  <div class="nav-item"        onclick="setActive(this)"><span class="nav-icon">📦</span>Inventory <span class="nav-badge">12</span></div>
-  <div class="nav-item"        onclick="setActive(this)"><span class="nav-icon">👥</span>Staff &amp; Shifts</div>
-  <div class="nav-item"        onclick="setActive(this)"><span class="nav-icon">📈</span>Sales &amp; Reports</div>
-  <div class="nav-item"        onclick="setActive(this)"><span class="nav-icon">🛒</span>Orders <span class="nav-badge">5</span></div>
-  <div class="nav-item"        onclick="setActive(this)"><span class="nav-icon">⚙️</span>Settings</div>
+<!-- Nav -->
+<nav>
+  <a href="#" class="active">All Products</a>
+  <a href="#">Office Supplies</a>
+  <a href="#">IT & Electronics</a>
+  <a href="#">Janitorial</a>
+  <a href="#">Safety & PPE</a>
+  <a href="#">Furniture</a>
+  <a href="#">Breakroom</a>
 </nav>
 
-<!-- ═══ KPI STRIP ═══ -->
-<div class="kpi-strip">
-  <div class="kpi-card">
-    <div class="kpi-icon-box" style="background:#fdf0f1;">💰</div>
-    <div class="kpi-body"><span class="kpi-value">$24,810</span><span class="kpi-label">Today's Revenue</span></div>
-    <span class="kpi-delta up">↑ 8.2%</span>
-  </div>
-  <div class="kpi-card">
-    <div class="kpi-icon-box" style="background:#f0fdf4;">🧾</div>
-    <div class="kpi-body"><span class="kpi-value">342</span><span class="kpi-label">Transactions</span></div>
-    <span class="kpi-delta up">↑ 4.1%</span>
-  </div>
-  <div class="kpi-card">
-    <div class="kpi-icon-box" style="background:#fffbeb;">⚠️</div>
-    <div class="kpi-body"><span class="kpi-value">12</span><span class="kpi-label">Low Stock Items</span></div>
-    <span class="kpi-delta warn">3 new</span>
-  </div>
-  <div class="kpi-card">
-    <div class="kpi-icon-box" style="background:#f0f4ff;">👤</div>
-    <div class="kpi-body"><span class="kpi-value">9 / 11</span><span class="kpi-label">Staff On Shift</span></div>
-  </div>
-  <div class="kpi-card">
-    <div class="kpi-icon-box" style="background:#fdf0f1;">🛒</div>
-    <div class="kpi-body"><span class="kpi-value">5</span><span class="kpi-label">Pending Orders</span></div>
-    <span class="kpi-delta down">Urgent</span>
+<!-- Main layout -->
+<div class="layout">
+  <aside>
+    <div class="filter-section">
+      <div class="filter-title">Category</div>
+      <label class="filter-option"><input type="checkbox" checked> Writing Instruments</label>
+      <label class="filter-option"><input type="checkbox" checked> Paper & Filing</label>
+      <label class="filter-option"><input type="checkbox" checked> Technology</label>
+      <label class="filter-option"><input type="checkbox" checked> Safety</label>
+      <label class="filter-option"><input type="checkbox" checked> Furniture</label>
+    </div>
+    <div class="filter-section">
+      <div class="filter-title">Price Range</div>
+      <div class="price-range">
+        <input type="range" min="0" max="500" value="500" id="priceRange" oninput="document.getElementById('priceMax').textContent='$'+this.value">
+        <div class="price-labels"><span>$0</span><span id="priceMax">$500</span></div>
+      </div>
+    </div>
+    <div class="filter-section">
+      <div class="filter-title">Availability</div>
+      <label class="filter-option"><input type="checkbox" checked> In Stock</label>
+      <label class="filter-option"><input type="checkbox"> Ships in 1-2 days</label>
+    </div>
+    <div class="filter-section">
+      <div class="filter-title">Supplier</div>
+      <label class="filter-option"><input type="checkbox" checked> SupplyDirect</label>
+      <label class="filter-option"><input type="checkbox"> 3M</label>
+      <label class="filter-option"><input type="checkbox"> Avery</label>
+    </div>
+  </aside>
+
+  <div class="grid-area">
+    <div class="grid-toolbar">
+      <span id="productCount">Showing 12 products</span>
+      <select class="sort-select">
+        <option>Sort: Featured</option>
+        <option>Price: Low to High</option>
+        <option>Price: High to Low</option>
+        <option>Newest</option>
+      </select>
+    </div>
+    <div class="product-grid" id="productGrid"></div>
   </div>
 </div>
 
-<!-- ═══ PAGE PLACEHOLDER ═══ -->
-<div class="page-body">
-  <div class="screen-label">SCREEN CONTENT AREA</div>
-  <div class="page-hint">Canvas app screens render below the header</div>
+<!-- Cart overlay & panel -->
+<div class="cart-overlay" id="cartOverlay" onclick="closeCart()"></div>
+<div class="cart-panel" id="cartPanel">
+  <div class="cart-header">
+    <h2>Shopping Cart</h2>
+    <button class="close-btn" onclick="closeCart()">✕</button>
+  </div>
+  <div class="cart-items" id="cartItems"></div>
+  <div class="cart-footer">
+    <div class="cart-totals">
+      <div class="cart-row"><span>Subtotal</span><span id="subtotal">$0.00</span></div>
+      <div class="cart-row"><span>Currency</span><span>USD</span></div>
+      <div class="cart-row total"><span>Total</span><span id="cartTotal">$0.00</span></div>
+    </div>
+    <button class="checkout-btn" onclick="openCheckout()">
+      ↩ Return to Dynamics 365
+    </button>
+    <p class="cxml-note">Items will be sent back via cXML PunchOutOrderMessage and added to your purchase requisition.</p>
+  </div>
 </div>
 
-<!-- ═══ POWERAPPS SPEC TABLE ═══ -->
-<div class="spec-panel">
-  <div class="spec-title">📋 PowerApps Canvas — Build Reference</div>
-  <table class="spec-table">
-    <tr><th>Element</th><th>PA Control Type</th><th>Key Properties</th></tr>
-    <tr>
-      <td>Header Bar</td><td>Rectangle</td>
-      <td><code>Fill: RGBA(200,49,61,1)</code> · Height: 64 · Width: Parent.Width · Y: 0</td>
-    </tr>
-    <tr>
-      <td>Logo Box</td><td>Rectangle</td>
-      <td><code>Fill: White</code> · 38×38 · RadiusTopLeft/Right/Bottom: 7</td>
-    </tr>
-    <tr>
-      <td>App Title</td><td>Label</td>
-      <td><code>Color: RGBA(255,255,255,1)</code> · Size: 15 · FontWeight: Bold</td>
-    </tr>
-    <tr>
-      <td>Store Selector</td><td>Button</td>
-      <td><code>Fill: RGBA(255,255,255,0.14)</code> · BorderColor: RGBA(255,255,255,0.32) · Color: White · OnSelect: Set(varStore, "Store 04")</td>
-    </tr>
-    <tr>
-      <td>Search Box</td><td>TextInput</td>
-      <td><code>Fill: White</code> · BorderThickness: 0 · HintText: "Search…" · RadiusTopLeft: 6</td>
-    </tr>
-    <tr>
-      <td>Icon Buttons</td><td>Icon</td>
-      <td><code>Color: White</code> · HoverColor: RGBA(255,255,255,0.7) · Width/Height: 36</td>
-    </tr>
-    <tr>
-      <td>Avatar Initials</td><td>Label inside Circle (Rectangle RadiusAll: 50)</td>
-      <td><code>Fill: White</code> · Color: RGBA(200,49,61,1) · FontWeight: Bold</td>
-    </tr>
-    <tr>
-      <td>Nav Bar</td><td>Rectangle</td>
-      <td><code>Fill: White</code> · Height: 48 · Y: 64 · Width: Parent.Width</td>
-    </tr>
-    <tr>
-      <td>Nav Active Underline</td><td>Rectangle</td>
-      <td><code>Fill: RGBA(200,49,61,1)</code> · Height: 3 · Y: 64+45 · Width: btnDashboard.Width</td>
-    </tr>
-    <tr>
-      <td>Nav Button — Active</td><td>Button</td>
-      <td><code>Fill: RGBA(200,49,61,0.08)</code> · Color: RGBA(200,49,61,1) · FontWeight: Semibold · BorderThickness: 0</td>
-    </tr>
-    <tr>
-      <td>Nav Button — Default</td><td>Button</td>
-      <td><code>Fill: Transparent</code> · Color: RGBA(87,96,106,1) · HoverFill: RGBA(200,49,61,0.06) · BorderThickness: 0</td>
-    </tr>
-    <tr>
-      <td>Badge Pill</td><td>Label + Rectangle</td>
-      <td><code>Fill: RGBA(200,49,61,1)</code> · Color: White · RadiusAll: 20 · Size: 10 · Height: 18</td>
-    </tr>
-    <tr>
-      <td>KPI Strip</td><td>Rectangle + Labels</td>
-      <td><code>Fill: White</code> · Height: 60 · Y: 112 · BorderColor bottom: RGBA(225,228,232,1)</td>
-    </tr>
-    <tr>
-      <td>Active Page Variable</td><td>PowerFx (OnSelect)</td>
-      <td><code>Set(varActivePage, "Dashboard")</code> → each nav button Fill: If(varActivePage="Dashboard", RGBA(200,49,61,0.08), Transparent)</td>
-    </tr>
-  </table>
+<!-- Checkout / cXML modal -->
+<div class="modal-overlay" id="checkoutModal">
+  <div class="modal">
+    <div class="modal-head">
+      <div class="icon">📤</div>
+      <div>
+        <h3>cXML PunchOut Response</h3>
+        <p>Ready to post back to Dynamics 365 Supply Chain Management</p>
+      </div>
+    </div>
+    <div class="modal-body">
+      <p>The following <strong>PunchOutOrderMessage</strong> will be submitted to your D365 SCM endpoint. Selected items will populate your purchase requisition lines.</p>
+      <div class="cxml-block" id="cxmlOutput"></div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-secondary" onclick="closeCheckout()">← Back to Catalog</button>
+      <button class="btn-primary" onclick="confirmReturn()">✓ Confirm &amp; Return to D365</button>
+    </div>
+  </div>
+</div>
+
+<!-- Success modal -->
+<div class="modal-overlay" id="successModal">
+  <div class="modal">
+    <div class="modal-head">
+      <div class="icon">✅</div>
+      <div>
+        <h3>Requisition Updated</h3>
+        <p>Items successfully transferred to Dynamics 365</p>
+      </div>
+    </div>
+    <div class="modal-body">
+      <div style="text-align:center;padding:20px 0;">
+        <div style="font-size:56px;margin-bottom:12px;">🎉</div>
+        <p style="font-size:15px;color:var(--ink);font-weight:600;margin-bottom:6px;">PunchOut complete!</p>
+        <p style="font-size:13px;">Your selected items have been added to the purchase requisition in D365 SCM. You can now submit the requisition for approval.</p>
+        <div style="margin-top:20px;display:inline-flex;align-items:center;gap:8px;background:var(--badge);color:var(--success);padding:10px 18px;border-radius:8px;font-weight:600;font-size:13px;">
+          ✓ Return to D365 SCM to complete the requisition
+        </div>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-primary" onclick="document.getElementById('successModal').classList.remove('open')">Close</button>
+    </div>
+  </div>
 </div>
 
 <script>
-  function setActive(el) {
-    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-    el.classList.add('active');
+const products = [
+  { id: 'SD-PEN-001', name: 'Ballpoint Pens, Blue (Box/12)', emoji: '🖊️', desc: 'Medium point, smooth write, ISO certified ink.', price: 8.49, uom: 'Box', category: 'Writing', badge: 'Bestseller' },
+  { id: 'SD-PEN-002', name: 'Highlighters Assorted (Pack/5)', emoji: '🖍️', desc: 'Chisel tip, fluorescent ink, odour-free formula.', price: 6.29, uom: 'Pack', category: 'Writing', badge: null },
+  { id: 'SD-PAP-001', name: 'A4 Copy Paper 80gsm (Ream/500)', emoji: '📄', desc: 'Acid-free, FSC certified, multifunction paper.', price: 9.99, uom: 'Ream', category: 'Paper', badge: 'In Stock' },
+  { id: 'SD-PAP-002', name: 'Lever Arch File A4 (Each)', emoji: '📁', desc: '70mm spine, durable PVC cover with thumb ring.', price: 4.15, uom: 'Each', category: 'Paper', badge: null },
+  { id: 'SD-TEC-001', name: 'USB-C Hub 7-in-1 (Each)', emoji: '🔌', desc: 'HDMI 4K, 2×USB-A 3.0, PD 100W, SD, Ethernet.', price: 39.99, uom: 'Each', category: 'Technology', badge: 'New' },
+  { id: 'SD-TEC-002', name: 'Wireless Keyboard & Mouse Set', emoji: '⌨️', desc: '2.4GHz, silent keys, 18-month battery life.', price: 54.99, uom: 'Set', category: 'Technology', badge: null },
+  { id: 'SD-SAF-001', name: 'Nitrile Gloves M (Box/100)', emoji: '🧤', desc: 'Powder-free, 4mil, EN455 certified, blue.', price: 14.75, uom: 'Box', category: 'Safety', badge: 'In Stock' },
+  { id: 'SD-SAF-002', name: 'Safety Glasses (Each)', emoji: '🥽', desc: 'Anti-fog coating, UV400, wrap-around frame.', price: 7.99, uom: 'Each', category: 'Safety', badge: null },
+  { id: 'SD-FUR-001', name: 'Mesh Task Chair (Each)', emoji: '🪑', desc: 'Lumbar support, height adj, 5-star base, 120kg rated.', price: 189.00, uom: 'Each', category: 'Furniture', badge: 'In Stock' },
+  { id: 'SD-PEN-003', name: 'Whiteboard Markers (Pack/4)', emoji: '✏️', desc: 'Bullet tip, black/blue/red/green, low odour.', price: 5.49, uom: 'Pack', category: 'Writing', badge: null },
+  { id: 'SD-TEC-003', name: 'Label Printer LW-400 (Each)', emoji: '🖨️', desc: 'USB + Bluetooth, 180dpi, includes 24mm tape.', price: 89.00, uom: 'Each', category: 'Technology', badge: 'New' },
+  { id: 'SD-PAP-003', name: 'Sticky Notes 76×76mm (Pk/12)', emoji: '📝', desc: '100 sheets per pad, strong adhesive, canary yellow.', price: 12.99, uom: 'Pack', category: 'Paper', badge: 'Bestseller' },
+];
+
+let cart = {};
+
+function renderProducts(list) {
+  const grid = document.getElementById('productGrid');
+  grid.innerHTML = '';
+  document.getElementById('productCount').textContent = `Showing ${list.length} products`;
+  list.forEach(p => {
+    const inCart = cart[p.id];
+    grid.innerHTML += `
+    <div class="product-card" id="card-${p.id}">
+      <div class="product-img">
+        ${p.emoji}
+        ${p.badge ? `<span class="badge">${p.badge}</span>` : ''}
+      </div>
+      <div class="product-body">
+        <div class="product-sku">${p.id}</div>
+        <div class="product-name">${p.name}</div>
+        <div class="product-desc">${p.desc}</div>
+      </div>
+      <div class="product-foot">
+        <div>
+          <div class="product-price">$${p.price.toFixed(2)}</div>
+          <div class="product-uom">per ${p.uom}</div>
+        </div>
+        <button class="add-btn ${inCart ? 'added' : ''}" id="btn-${p.id}" onclick="addToCart('${p.id}')">
+          ${inCart ? '✓ Added' : '+ Add'}
+        </button>
+      </div>
+    </div>`;
+  });
+}
+
+function filterProducts() {
+  const q = document.getElementById('searchInput').value.toLowerCase();
+  renderProducts(products.filter(p => p.name.toLowerCase().includes(q) || p.desc.toLowerCase().includes(q)));
+}
+
+function addToCart(id) {
+  const p = products.find(x => x.id === id);
+  if (!p) return;
+  if (cart[id]) { cart[id].qty++; }
+  else { cart[id] = { ...p, qty: 1 }; }
+  updateCartUI();
+  const btn = document.getElementById('btn-' + id);
+  if (btn) { btn.textContent = '✓ Added'; btn.classList.add('added'); }
+  // flash count
+  const cnt = document.getElementById('cartCount');
+  cnt.style.transform = 'scale(1.4)';
+  setTimeout(() => cnt.style.transform = '', 200);
+}
+
+function updateCartUI() {
+  const items = Object.values(cart);
+  const total = items.reduce((s, i) => s + i.price * i.qty, 0);
+  document.getElementById('cartCount').textContent = items.reduce((s, i) => s + i.qty, 0);
+  document.getElementById('subtotal').textContent = '$' + total.toFixed(2);
+  document.getElementById('cartTotal').textContent = '$' + total.toFixed(2);
+
+  const container = document.getElementById('cartItems');
+  if (items.length === 0) {
+    container.innerHTML = `<div class="cart-empty"><div class="empty-icon">🛒</div>Your cart is empty.<br>Browse and add products above.</div>`;
+    return;
   }
+  container.innerHTML = items.map(i => `
+    <div class="cart-item">
+      <div class="cart-item-icon">${i.emoji}</div>
+      <div class="cart-item-info">
+        <div class="cart-item-name">${i.name}</div>
+        <div class="cart-item-sku">${i.id} · $${i.price.toFixed(2)}/${i.uom}</div>
+        <div class="cart-item-meta">
+          <div class="qty-control">
+            <button class="qty-btn" onclick="changeQty('${i.id}',-1)">−</button>
+            <span class="qty-val">${i.qty}</span>
+            <button class="qty-btn" onclick="changeQty('${i.id}',1)">+</button>
+          </div>
+          <button class="remove-item" onclick="removeItem('${i.id}')">🗑</button>
+          <span class="cart-item-price" style="margin-left:auto">$${(i.price*i.qty).toFixed(2)}</span>
+        </div>
+      </div>
+    </div>`).join('');
+}
+
+function changeQty(id, delta) {
+  if (!cart[id]) return;
+  cart[id].qty += delta;
+  if (cart[id].qty <= 0) delete cart[id];
+  updateCartUI();
+  // re-render buttons
+  renderProducts(products.filter(p => {
+    const q = document.getElementById('searchInput').value.toLowerCase();
+    return !q || p.name.toLowerCase().includes(q) || p.desc.toLowerCase().includes(q);
+  }));
+}
+
+function removeItem(id) {
+  delete cart[id];
+  updateCartUI();
+  const btn = document.getElementById('btn-' + id);
+  if (btn) { btn.textContent = '+ Add'; btn.classList.remove('added'); }
+}
+
+function openCart() {
+  document.getElementById('cartOverlay').classList.add('open');
+  document.getElementById('cartPanel').classList.add('open');
+}
+function closeCart() {
+  document.getElementById('cartOverlay').classList.remove('open');
+  document.getElementById('cartPanel').classList.remove('open');
+}
+
+function openCheckout() {
+  const items = Object.values(cart);
+  if (items.length === 0) { alert('Please add items to your cart first.'); return; }
+  closeCart();
+  document.getElementById('cxmlOutput').textContent = generateCXML(items);
+  document.getElementById('checkoutModal').classList.add('open');
+}
+function closeCheckout() {
+  document.getElementById('checkoutModal').classList.remove('open');
+  openCart();
+}
+function confirmReturn() {
+  document.getElementById('checkoutModal').classList.remove('open');
+  document.getElementById('successModal').classList.add('open');
+  cart = {};
+  updateCartUI();
+  renderProducts(products);
+}
+
+function generateCXML(items) {
+  const now = new Date().toISOString();
+  const lines = items.map((item, i) => `
+    <ItemIn quantity="${item.qty}">
+      <ItemID>
+        <SupplierPartID>${item.id}</SupplierPartID>
+        <SupplierPartAuxiliaryID>LINE-${String(i+1).padStart(3,'0')}</SupplierPartAuxiliaryID>
+      </ItemID>
+      <ItemDetail>
+        <UnitPrice>
+          <Money currency="USD">${item.price.toFixed(2)}</Money>
+        </UnitPrice>
+        <Description xml:lang="en">${item.name}</Description>
+        <UnitOfMeasure>${item.uom.toUpperCase()}</UnitOfMeasure>
+        <Classification domain="UNSPSC">44121500</Classification>
+        <ManufacturerName>SupplyDirect</ManufacturerName>
+      </ItemDetail>
+    </ItemIn>`).join('');
+
+  const total = items.reduce((s, i) => s + i.price * i.qty, 0);
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE cXML SYSTEM "http://xml.cxml.org/schemas/cXML/1.2.014/cXML.dtd">
+<cXML payloadID="${now}@supplydirect.com"
+      timestamp="${now}"
+      xml:lang="en-US">
+  <Header>
+    <From>
+      <Credential domain="DUNS">
+        <Identity>SupplyDirect-UK</Identity>
+      </Credential>
+    </From>
+    <To>
+      <Credential domain="DUNS">
+        <Identity>BUYER-D365-CORP</Identity>
+      </Credential>
+    </To>
+    <Sender>
+      <Credential domain="supplydirect.com">
+        <Identity>supplydirect-cxml</Identity>
+        <SharedSecret>••••••••</SharedSecret>
+      </Credential>
+      <UserAgent>SupplyDirect PunchOut v2.1</UserAgent>
+    </Sender>
+  </Header>
+  <Message>
+    <PunchOutOrderMessage>
+      <BuyerCookie>D365-SESS-2024-08491</BuyerCookie>
+      <PunchOutOrderMessageHeader operationAllowed="create">
+        <Total>
+          <Money currency="USD">${total.toFixed(2)}</Money>
+        </Total>
+      </PunchOutOrderMessageHeader>${lines}
+    </PunchOutOrderMessage>
+  </Message>
+</cXML>`;
+}
+
+// initial render
+renderProducts(products);
+updateCartUI();
 </script>
 </body>
 </html>
