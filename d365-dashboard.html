@@ -1,0 +1,1078 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Sales Dashboard</title>
+  <script type="text/javascript" src="https://alcdn.msauth.net/browser/2.35.0/js/msal-browser.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet"/>
+  <style>
+    :root {
+      --bg: #f8f9fa;
+      --surface: #ffffff;
+      --card: #ffffff;
+      --border: #e9ecef;
+      --accent: #111827;
+      --accent2: #6366f1;
+      --accent3: #f59e0b;
+      --accent4: #10b981;
+      --text: #111827;
+      --muted: #9ca3af;
+      --mono: 'Space Mono', monospace;
+      --sans: 'Space Grotesk', sans-serif;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--sans);
+      min-height: 100vh;
+    }
+
+    /* ── Header ── */
+    header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 0 40px;
+      height: 60px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      box-shadow: 0 1px 0 var(--border);
+    }
+
+    .logo {
+      font-family: var(--mono);
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      color: var(--accent);
+    }
+    .logo span { color: var(--muted); font-weight: 400; }
+
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .status-pill {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-family: var(--mono);
+      font-size: 10px;
+      letter-spacing: 0.1em;
+      color: var(--muted);
+      background: var(--card);
+      border: 1px solid var(--border);
+      padding: 5px 12px;
+      border-radius: 20px;
+    }
+    .status-pill .dot {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: var(--muted);
+    }
+    .status-pill.on .dot { background: #10b981; box-shadow: 0 0 6px #10b981; }
+    .status-pill.on { color: #10b981; border-color: rgba(16,185,129,0.2); }
+
+    /* ── Login ── */
+    #login-panel {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: calc(100vh - 56px);
+      gap: 24px;
+      padding: 40px;
+      animation: fadeUp 0.5s ease;
+    }
+    .login-icon {
+      width: 64px; height: 64px;
+      background: #111827;
+      border-radius: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 28px;
+    }
+    .login-title {
+      font-size: 28px;
+      font-weight: 700;
+      color: var(--text);
+      text-align: center;
+    }
+    .login-sub {
+      font-size: 14px;
+      color: var(--muted);
+      text-align: center;
+      max-width: 340px;
+      line-height: 1.7;
+    }
+
+    /* ── Buttons ── */
+    .btn {
+      font-family: var(--sans);
+      font-size: 13px;
+      font-weight: 600;
+      border: none;
+      cursor: pointer;
+      padding: 11px 24px;
+      border-radius: 8px;
+      transition: all 0.18s;
+      letter-spacing: 0.02em;
+    }
+    .btn-primary { background: var(--accent); color: #fff; }
+    .btn-primary:hover { background: #374151; box-shadow: 0 4px 20px rgba(17,24,39,0.25); transform: translateY(-1px); }
+    .btn-ghost { background: transparent; color: var(--muted); border: 1px solid var(--border); }
+    .btn-ghost:hover { border-color: var(--accent); color: var(--accent); }
+    .btn-sm { font-size: 11px; padding: 7px 14px; border-radius: 6px; }
+
+    /* ── Dashboard ── */
+    #dashboard { display: none; padding: 20px 24px; animation: fadeUp 0.4s ease; width: 100%; }
+
+    /* Controls bar */
+    .controls {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+    }
+    .controls-left { flex: 1; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+
+    select {
+      background: var(--card);
+      border: 1px solid var(--border);
+      color: var(--text);
+      font-family: var(--sans);
+      font-size: 13px;
+      padding: 9px 14px;
+      border-radius: 8px;
+      outline: none;
+      cursor: pointer;
+      transition: border-color 0.2s;
+    }
+    select:focus { border-color: var(--accent); }
+    select option { background: #ffffff; color: #111827; }
+
+    .page-title {
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--text);
+      margin-right: 8px;
+    }
+    .page-sub {
+      font-size: 12px;
+      color: var(--muted);
+      font-family: var(--mono);
+    }
+
+    /* ── KPI Cards ── */
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+
+    .kpi-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 18px 20px;
+      position: relative;
+      overflow: hidden;
+      transition: border-color 0.2s, transform 0.2s, box-shadow 0.2s;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+    }
+    .kpi-card:hover { border-color: #d1d5db; transform: translateY(-3px); box-shadow: 0 12px 40px rgba(0,0,0,0.08); }
+    .kpi-card::before {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 2px;
+    }
+    .kpi-card.c1::before { background: #111827; }
+    .kpi-card.c2::before { background: #6366f1; }
+    .kpi-card.c3::before { background: #f59e0b; }
+    .kpi-card.c4::before { background: #10b981; }
+
+    .kpi-label {
+      font-size: 11px;
+      font-weight: 500;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 10px;
+    }
+    .kpi-value {
+      font-family: var(--mono);
+      font-size: 26px;
+      font-weight: 700;
+      color: var(--text);
+      letter-spacing: -0.02em;
+      line-height: 1;
+    }
+    .kpi-sub {
+      font-size: 12px;
+      color: var(--muted);
+      margin-top: 6px;
+    }
+    .kpi-icon {
+      position: absolute;
+      right: 16px;
+      top: 16px;
+      font-size: 22px;
+      opacity: 0.15;
+    }
+
+    /* ── Charts grid ── */
+    .charts-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 16px;
+    }
+    @media (max-width: 800px) { .charts-grid { grid-template-columns: 1fr; } }
+
+    .chart-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 18px 20px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+    }
+    .chart-card.full { grid-column: 1 / -1; }
+
+    .chart-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 4px;
+    }
+    .chart-sub {
+      font-size: 11px;
+      color: var(--muted);
+      margin-bottom: 20px;
+      font-family: var(--mono);
+    }
+    .chart-wrap { position: relative; height: 240px; }
+    .chart-wrap.tall { height: 360px; }
+
+    /* ── Store table ── */
+    .store-table-wrap { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    thead { border-bottom: 1px solid var(--border); }
+    th {
+      font-size: 10px;
+      font-weight: 600;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--muted);
+      padding: 10px 12px;
+      text-align: left;
+    }
+    td { padding: 11px 12px; border-bottom: 1px solid var(--border); font-size: 13px; }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: rgba(99,102,241,0.04); }
+    .rank { font-family: var(--mono); font-size: 11px; color: var(--muted); }
+    .store-name { font-weight: 600; color: var(--text); }
+    .num { font-family: var(--mono); text-align: right; }
+    .bar-cell { width: 120px; }
+    .mini-bar { height: 4px; border-radius: 2px; background: #6366f1; opacity: 0.85; }
+
+    /* ── Loading / empty states ── */
+    .state-box {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 300px;
+      gap: 16px;
+      color: var(--muted);
+      font-family: var(--mono);
+      font-size: 12px;
+      letter-spacing: 0.08em;
+    }
+    .spinner {
+      width: 32px; height: 32px;
+      border: 2px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    .error-msg { color: var(--accent3); text-align: center; max-width: 400px; line-height: 1.7; }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(10px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    footer {
+      padding: 16px 32px;
+      border-top: 1px solid var(--border);
+      font-family: var(--mono);
+      font-size: 10px;
+      color: var(--muted);
+      display: flex;
+      justify-content: space-between;
+      letter-spacing: 0.08em;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="logo">RETAIL <span>/</span> SALES DASHBOARD</div>
+  <div class="header-right">
+    <div class="status-pill" id="status-pill">
+      <div class="dot"></div>
+      <span id="status-text">NOT CONNECTED</span>
+    </div>
+    <button class="btn btn-ghost btn-sm" id="signout-btn" style="display:none" onclick="signOut()">Sign out</button>
+  </div>
+</header>
+
+<!-- LOGIN -->
+<div id="login-panel">
+  <div class="login-icon">📊</div>
+  <div class="login-title">Retail Sales Dashboard</div>
+  <p class="login-sub">Sign in with your Microsoft account to load live sales data from Dynamics 365.</p>
+  <button class="btn btn-primary" onclick="signIn()">Sign in with Microsoft</button>
+</div>
+
+<!-- DASHBOARD -->
+<div id="dashboard">
+
+  <div class="controls">
+    <div class="controls-left">
+      <div>
+        <div class="page-title">Sales Overview</div>
+        <div class="page-sub" id="data-range-label">—</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <label style="font-size:11px;color:var(--muted);font-weight:500">From</label>
+        <select id="month-from" onchange="applyFilters()">
+          <option value="">All</option>
+        </select>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <label style="font-size:11px;color:var(--muted);font-weight:500">To</label>
+        <select id="month-to" onchange="applyFilters()">
+          <option value="">All</option>
+        </select>
+      </div>
+      <select id="store-filter" onchange="applyFilters()">
+        <option value="">All stores</option>
+      </select>
+    </div>
+    <button class="btn btn-ghost btn-sm" onclick="loadData()" id="refresh-btn">↺ Refresh</button>
+    <button class="btn btn-ghost btn-sm" onclick="openTxnPanel()">≡ Transactions</button>
+  </div>
+
+  <!-- KPI cards -->
+  <div class="kpi-grid">
+    <div class="kpi-card c1">
+      <div class="kpi-icon">💰</div>
+      <div class="kpi-label">Total Net Sales</div>
+      <div class="kpi-value" id="kpi-sales">—</div>
+      <div class="kpi-sub" id="kpi-sales-sub"></div>
+    </div>
+    <div class="kpi-card c2">
+      <div class="kpi-icon">📦</div>
+      <div class="kpi-label">Total Qty Sold</div>
+      <div class="kpi-value" id="kpi-qty">—</div>
+      <div class="kpi-sub" id="kpi-qty-sub"></div>
+    </div>
+    <div class="kpi-card c3">
+      <div class="kpi-icon">🏪</div>
+      <div class="kpi-label">Active Stores</div>
+      <div class="kpi-value" id="kpi-stores">—</div>
+      <div class="kpi-sub" id="kpi-stores-sub"></div>
+    </div>
+    <div class="kpi-card c4">
+      <div class="kpi-icon">🧾</div>
+      <div class="kpi-label">Transactions</div>
+      <div class="kpi-value" id="kpi-txn">—</div>
+      <div class="kpi-sub" id="kpi-txn-sub"></div>
+    </div>
+    <div class="kpi-card" style="border-top:2px solid #ef4444;">
+      <div class="kpi-icon">↩️</div>
+      <div class="kpi-label" style="color:#ef4444">Return Amount</div>
+      <div class="kpi-value" id="kpi-returns-amount" style="color:#ef4444">—</div>
+      <div class="kpi-sub" id="kpi-returns-sub"></div>
+    </div>
+    <div class="kpi-card" style="border-top:2px solid #ef4444;">
+      <div class="kpi-icon">📦</div>
+      <div class="kpi-label" style="color:#ef4444">Return Qty</div>
+      <div class="kpi-value" id="kpi-returns-qty" style="color:#ef4444">—</div>
+      <div class="kpi-sub"></div>
+    </div>
+  </div>
+
+  <!-- Charts -->
+  <div class="charts-grid">
+
+    <div class="chart-card full" id="daily-chart-card" style="display:none">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+        <div class="chart-title">Daily Sales — <span id="daily-chart-month-label"></span></div>
+        <button class="btn btn-ghost btn-sm" onclick="closeDailyChart()">✕ Close</button>
+      </div>
+      <div class="chart-sub">Sales per day for selected month</div>
+      <div id="daily-chart-wrap-outer" style="overflow-x:auto; overflow-y:hidden; width:100%;"><div id="daily-chart-wrap" style="height:340px;"><canvas id="chart-daily-sales"></canvas></div></div>
+    </div>
+
+    <div class="chart-card">
+      <div class="chart-title">Sales by Store</div>
+      <div class="chart-sub">Revenue share per store</div>
+      <div class="chart-wrap"><canvas id="chart-store-pie"></canvas></div></div>
+    </div>
+  </div>
+
+  <!-- Returns breakdown table -->
+  <div class="chart-card" id="returns-breakdown-card" style="margin-bottom:12px">
+    <div class="chart-title">Returns Breakdown</div>
+    <div class="chart-sub">Return amount, quantity and store</div>
+    <div id="returns-table-wrap"></div>
+  </div>
+
+  <!-- Store breakdown table -->
+  <div class="chart-card" id="store-breakdown-card" style="margin-bottom:12px">
+    <div class="chart-title">Store Breakdown</div>
+    <div class="chart-sub">Net sales and quantity by store</div>
+    <div class="store-table-wrap" id="store-table-wrap">
+      <div class="state-box"><div class="spinner"></div><span>Loading…</span></div>
+    </div>
+  </div>
+
+</div>
+
+<!-- ── TRANSACTION SIDE PANEL ── -->
+<div id="txn-overlay" onclick="closeTxnPanel()" style="
+  display:none; position:fixed; inset:0; background:rgba(0,0,0,0.2);
+  z-index:200; backdrop-filter:blur(2px);
+"></div>
+
+<div id="txn-panel" style="
+  position:fixed; top:0; right:-680px; width:680px; height:100vh;
+  background:#fff; border-left:1px solid #e9ecef;
+  box-shadow:-8px 0 32px rgba(0,0,0,0.08);
+  z-index:201; display:flex; flex-direction:column;
+  transition:right 0.3s cubic-bezier(0.4,0,0.2,1);
+">
+  <div style="padding:18px 20px; border-bottom:1px solid #e9ecef; display:flex; align-items:center; justify-content:space-between; flex-shrink:0">
+    <div>
+      <div style="font-size:17px; font-weight:700; color:#111827" id="txn-panel-title">Transactions</div>
+      <div style="font-size:12px; color:#6b7280; font-family:'Space Mono',monospace; margin-top:4px" id="txn-panel-sub"></div>
+    </div>
+    <button onclick="closeTxnPanel()" style="
+      background:none; border:1px solid #e9ecef; cursor:pointer;
+      font-size:12px; color:#6b7280; padding:6px 12px; border-radius:6px;
+      font-family:'Space Grotesk',sans-serif; font-weight:500;
+    ">✕ Close</button>
+  </div>
+  <div style="padding:12px 20px; border-bottom:1px solid #e9ecef; flex-shrink:0">
+    <input type="text" id="txn-search" placeholder="Search transactions…" oninput="filterTxnGrid()"
+      style="width:100%; background:#f8f9fa; border:1px solid #e9ecef; border-radius:8px;
+             padding:10px 14px; font-size:14px; font-family:'Space Grotesk',sans-serif;
+             color:#111827; outline:none;"/>
+  </div>
+  <div id="txn-grid-wrap" style="flex:1; overflow-y:auto; overflow-x:auto;">
+    <table id="txn-grid" style="width:100%; border-collapse:collapse; font-size:12px;">
+      <thead style="position:sticky; top:0; background:#f8f9fa; z-index:1;">
+        <tr>
+          <th onclick="sortTxn('mserp_transactionid')" style="padding:10px 12px; text-align:left; font-size:11px; font-weight:600; letter-spacing:0.06em; text-transform:uppercase; color:#6b7280; cursor:pointer; white-space:nowrap; border-bottom:1px solid #e9ecef;">TXN ID ↕</th>
+          <th onclick="sortTxn('mserp_transdate')" style="padding:10px 12px; text-align:left; font-size:11px; font-weight:600; letter-spacing:0.06em; text-transform:uppercase; color:#6b7280; cursor:pointer; white-space:nowrap; border-bottom:1px solid #e9ecef;">Date ↕</th>
+          <th onclick="sortTxn('mserp_store')" style="padding:10px 12px; text-align:left; font-size:11px; font-weight:600; letter-spacing:0.06em; text-transform:uppercase; color:#6b7280; cursor:pointer; white-space:nowrap; border-bottom:1px solid #e9ecef;">Store ↕</th>
+          <th onclick="sortTxn('mserp_terminalid')" style="padding:10px 12px; text-align:left; font-size:11px; font-weight:600; letter-spacing:0.06em; text-transform:uppercase; color:#6b7280; cursor:pointer; white-space:nowrap; border-bottom:1px solid #e9ecef;">Terminal ↕</th>
+          <th onclick="sortTxn('mserp_itemid')" style="padding:10px 12px; text-align:left; font-size:11px; font-weight:600; letter-spacing:0.06em; text-transform:uppercase; color:#6b7280; cursor:pointer; white-space:nowrap; border-bottom:1px solid #e9ecef;">Item ↕</th>
+          <th onclick="sortTxn('mserp_qty')" style="padding:10px 12px; text-align:right; font-size:11px; font-weight:600; letter-spacing:0.06em; text-transform:uppercase; color:#6b7280; cursor:pointer; white-space:nowrap; border-bottom:1px solid #e9ecef;">Qty ↕</th>
+          <th onclick="sortTxn('mserp_netamount')" style="padding:10px 12px; text-align:right; font-size:11px; font-weight:600; letter-spacing:0.06em; text-transform:uppercase; color:#6b7280; cursor:pointer; white-space:nowrap; border-bottom:1px solid #e9ecef;">Net Amount ↕</th>
+        </tr>
+      </thead>
+      <tbody id="txn-tbody"></tbody>
+    </table>
+  </div>
+  <div style="padding:12px 20px; border-top:1px solid #e9ecef; font-size:12px; color:#6b7280; font-family:'Space Mono',monospace; flex-shrink:0" id="txn-count-label"></div>
+</div>
+
+<footer>
+  <span>Retail Sales Dashboard — D365 Virtual Entity</span>
+  <span id="footer-user"></span>
+</footer>
+
+<script>
+  // ─────────────────────────────────────────────
+  //  CONFIG
+  // ─────────────────────────────────────────────
+  const TENANT_ID  = "3216ff05-4e76-4673-9760-8546567f2fca";
+  const CLIENT_ID  = "c54efe5e-4094-43db-830c-eaf127a06510";
+  const D365_URL   = "https://operations-sales-demo.crm4.dynamics.com";
+  const ENTITY    = "mserp_retailtransactionsalestransbientities";
+  // ─────────────────────────────────────────────
+
+  // MSAL
+  const msalConfig = {
+    auth: {
+      clientId: CLIENT_ID,
+      authority: `https://login.microsoftonline.com/${TENANT_ID}`,
+      redirectUri: window.location.href.split("?")[0].split("#")[0],
+    },
+    cache: { cacheLocation: "sessionStorage" }
+  };
+  const msalInstance = new msal.PublicClientApplication(msalConfig);
+  const loginRequest = { scopes: [`${D365_URL}/.default`] };
+  let currentAccount = null;
+  let msalReady = false;
+  let rawData = [];
+  let charts = {};
+
+  msalInstance.initialize().then(() => {
+    msalReady = true;
+    return msalInstance.handleRedirectPromise();
+  }).then(res => {
+    if (res) setAccount(res.account);
+    else {
+      const accs = msalInstance.getAllAccounts();
+      if (accs.length > 0) setAccount(accs[0]);
+    }
+  }).catch(console.error);
+
+  function setAccount(account) {
+    currentAccount = account;
+    document.getElementById("login-panel").style.display = "none";
+    document.getElementById("dashboard").style.display = "block";
+    document.getElementById("signout-btn").style.display = "block";
+    const pill = document.getElementById("status-pill");
+    pill.classList.add("on");
+    document.getElementById("status-text").textContent = account.username;
+    document.getElementById("footer-user").textContent = account.username;
+    loadData();
+  }
+
+  async function signIn() {
+    if (!msalReady) { alert("Still initializing, try again."); return; }
+    try { await msalInstance.loginRedirect(loginRequest); }
+    catch(e) { alert("Login failed: " + e.message); }
+  }
+
+  function signOut() { msalInstance.logoutRedirect(); }
+
+  async function getToken() {
+    const req = { ...loginRequest, account: currentAccount };
+    try {
+      const res = await msalInstance.acquireTokenSilent(req);
+      return res.accessToken;
+    } catch(e) {
+      await msalInstance.acquireTokenRedirect(req);
+    }
+  }
+
+  // ── Data loading ──
+  async function loadData() {
+    const btn = document.getElementById("refresh-btn");
+    btn.textContent = "Loading…";
+    btn.disabled = true;
+    showLoadingState();
+
+    try {
+      const token = await getToken();
+      const fields = [
+        "mserp_store",
+        "mserp_transdate",
+        "mserp_netamount",
+        "mserp_qty",
+        "mserp_currency",
+        "mserp_transactionid",
+        "mserp_itemid",
+        "mserp_terminalid",
+        "mserp_returnqty",
+        "mserp_returntransactionid",
+        "mserp_returnstore"
+      ].join(",");
+
+      // Last 2 fiscal years — Jan 1st two years ago to today
+      const fiscalStart = new Date(new Date().getFullYear() - 2, 0, 1);
+      const fiscalFilter = `mserp_transdate ge ${fiscalStart.toISOString().split("T")[0]}`;
+
+      const PAGE = 1000;
+      let url = `${D365_URL}/api/data/v9.2/${ENTITY}?$select=${fields}&$filter=${encodeURIComponent(fiscalFilter)}&$top=${PAGE}`;
+      rawData = [];
+      let page = 0;
+
+      while (url) {
+        page++;
+        document.getElementById("store-table-wrap").innerHTML =
+          `<div class="state-box"><div class="spinner"></div><span>Loading page ${page} — ${rawData.length} records so far…</span></div>`;
+
+        const res = await fetch(url, {
+          headers: {
+            "Authorization": `Bearer ${token}`,
+            "Accept": "application/json",
+            "OData-MaxVersion": "4.0",
+            "OData-Version": "4.0",
+            "Prefer": `odata.maxpagesize=${PAGE}`
+          }
+        });
+
+        if (!res.ok) throw new Error(`${res.status} — ${await res.text()}`);
+        const data = await res.json();
+        rawData = rawData.concat(data.value || []);
+
+        // Follow next page if exists
+        url = data["@odata.nextLink"] || null;
+      }
+
+      populateFilters();
+      applyFilters();
+
+    } catch(e) {
+      showError(e.message);
+    } finally {
+      btn.textContent = "↺ Refresh";
+      btn.disabled = false;
+    }
+  }
+
+  function populateFilters() {
+    const months = [...new Set(rawData.map(r => toMonthKey(r.mserp_transdate)).filter(Boolean))].sort();
+    const currentMonth = toMonthKey(new Date().toISOString());
+    const opts = months.map(m => `<option value="${m}">${formatMonth(m)}</option>`).join("");
+
+    document.getElementById("month-from").innerHTML = '<option value="">All</option>' + opts;
+    document.getElementById("month-to").innerHTML = '<option value="">All</option>' + opts;
+
+    // Default both to current month if it exists in data, else last available month
+    const defaultMonth = months.includes(currentMonth) ? currentMonth : months[months.length - 1];
+    document.getElementById("month-from").value = defaultMonth;
+    document.getElementById("month-to").value = defaultMonth;
+
+    const stores = [...new Set(rawData.map(r => r.mserp_store).filter(Boolean))].sort();
+    document.getElementById("store-filter").innerHTML = '<option value="">All stores</option>' +
+      stores.map(s => `<option value="${s}">${s}</option>`).join("");
+  }
+
+  function applyFilters() {
+    const from  = document.getElementById("month-from").value;
+    let to      = document.getElementById("month-to").value;
+    const store = document.getElementById("store-filter").value;
+
+    // Constrain To options — only allow months >= From
+    const toSel = document.getElementById("month-to");
+    const allMonths = [...new Set(rawData.map(r => toMonthKey(r.mserp_transdate)).filter(Boolean))].sort();
+    toSel.innerHTML = '<option value="">All</option>' +
+      allMonths
+        .filter(m => !from || m >= from)
+        .map(m => `<option value="${m}">${formatMonth(m)}</option>`).join("");
+
+    // If current To is now invalid, reset it to the first valid option
+    if (from && to && to < from) {
+      to = from;
+      toSel.value = from;
+    } else {
+      toSel.value = to;
+    }
+
+    let filtered = rawData;
+    if (from) filtered = filtered.filter(r => toMonthKey(r.mserp_transdate) >= from);
+    if (to)   filtered = filtered.filter(r => toMonthKey(r.mserp_transdate) <= to);
+    if (store) filtered = filtered.filter(r => r.mserp_store === store);
+    renderDashboard(filtered);
+
+    // Always show daily chart for selected range
+    renderDailyChart(from, filtered);
+  }
+
+  function renderDashboard(data) {
+    if (data.length === 0) { showError("No records match the current filters."); return; }
+
+    const currency   = data[0]?.mserp_currency || "";
+
+    // Split sales (negative qty in F&O) and returns (positive qty in F&O)
+    const saleLines   = data.filter(r => (parseFloat(r.mserp_qty) || 0) < 0);
+    const returnLines = data.filter(r => (parseFloat(r.mserp_qty) || 0) > 0);
+
+    const totalSales  = saleLines.reduce((s, r) => s + Math.abs(parseFloat(r.mserp_netamount) || 0), 0);
+    const totalQty    = saleLines.reduce((s, r) => s + Math.abs(parseFloat(r.mserp_qty) || 0), 0);
+    const returnAmount= returnLines.reduce((s, r) => s + (parseFloat(r.mserp_netamount) || 0), 0);
+    const returnQty   = returnLines.reduce((s, r) => s + (parseFloat(r.mserp_qty) || 0), 0);
+    const stores      = new Set(data.map(r => r.mserp_store).filter(Boolean));
+    const txns        = new Set(saleLines.map(r => r.mserp_transactionid).filter(Boolean));
+
+    document.getElementById("kpi-sales").textContent        = fmt(totalSales, currency);
+    document.getElementById("kpi-sales-sub").textContent    = `${saleLines.length} line items`;
+    document.getElementById("kpi-qty").textContent          = fmtNum(totalQty);
+    document.getElementById("kpi-qty-sub").textContent      = "units sold";
+    document.getElementById("kpi-stores").textContent       = stores.size;
+    document.getElementById("kpi-stores-sub").textContent   = "stores reporting";
+    document.getElementById("kpi-txn").textContent          = fmtNum(txns.size);
+    document.getElementById("kpi-txn-sub").textContent      = "unique transactions";
+    document.getElementById("kpi-returns-amount").textContent = fmt(returnAmount, currency);
+    document.getElementById("kpi-returns-qty").textContent    = fmtNum(returnQty);
+    document.getElementById("kpi-returns-sub").textContent    = `${returnLines.length} return lines`;
+
+    // Date range label
+    const dates = data.map(r => r.mserp_transdate).filter(Boolean).sort();
+    if (dates.length) {
+      document.getElementById("data-range-label").textContent =
+        `${fmtDate(dates[0])} → ${fmtDate(dates[dates.length-1])}`;
+    }
+
+    // Monthly data
+    const byMonth = {};
+    data.forEach(r => {
+      const mk = toMonthKey(r.mserp_transdate);
+      if (!mk) return;
+      if (!byMonth[mk]) byMonth[mk] = { sales: 0, qty: 0 };
+      byMonth[mk].sales += -(parseFloat(r.mserp_netamount) || 0);
+      byMonth[mk].qty   += -(parseFloat(r.mserp_qty) || 0);
+    });
+    const months = Object.keys(byMonth).sort();
+
+    // By store
+    const byStore = {};
+    data.forEach(r => {
+      const s = r.mserp_store || "Unknown";
+      if (!byStore[s]) byStore[s] = { sales: 0, qty: 0 };
+      byStore[s].sales += -(parseFloat(r.mserp_netamount) || 0);
+      byStore[s].qty   += -(parseFloat(r.mserp_qty) || 0);
+    });
+    const sortedStores = Object.entries(byStore).sort((a,b) => b[1].sales - a[1].sales);
+    const maxSales = sortedStores[0]?.[1].sales || 1;
+
+
+
+
+    // ── Chart: Store pie ──
+    const COLORS = ["#6366f1","#f59e0b","#10b981","#3b82f6","#ec4899","#8b5cf6","#14b8a6","#f97316","#64748b","#a78bfa"];
+    renderChart("chart-store-pie", "doughnut", {
+      labels: sortedStores.slice(0,10).map(([s]) => s),
+      datasets: [{
+        data: sortedStores.slice(0,10).map(([,v]) => v.sales),
+        backgroundColor: COLORS,
+        borderWidth: 0,
+        hoverOffset: 6,
+      }]
+    }, {
+      plugins: {
+        legend: { position: "right", labels: { color: "#111827", font: { size: 11 }, padding: 12, boxWidth: 12 } }
+      },
+      cutout: "60%"
+    });
+
+    // ── Store table — hide if single store selected ──
+    const selectedStore = document.getElementById("store-filter").value;
+    const storeCard = document.getElementById("store-breakdown-card");
+    if (selectedStore) {
+      storeCard.style.display = "none";
+    } else {
+      storeCard.style.display = "block";
+    }
+    const tableHtml = `
+      <table>
+        <thead><tr>
+          <th>#</th>
+          <th>Store</th>
+          <th class="num">Net Sales</th>
+          <th class="num">Qty</th>
+          <th class="bar-cell">Share</th>
+        </tr></thead>
+        <tbody>
+          ${sortedStores.map(([store, v], i) => `
+            <tr>
+              <td class="rank">${i+1}</td>
+              <td class="store-name">${esc(store)}</td>
+              <td class="num">${fmt(v.sales, currency)}</td>
+              <td class="num">${fmtNum(v.qty)}</td>
+              <td class="bar-cell">
+                <div class="mini-bar" style="width:${Math.round((v.sales/maxSales)*100)}%"></div>
+              </td>
+            </tr>`).join("")}
+        </tbody>
+      </table>`;
+    document.getElementById("store-table-wrap").innerHTML = tableHtml;
+  }
+
+  function renderDailyChart(fromKey, data) {
+    document.getElementById("daily-chart-card").style.display = "block";
+    // Defer rendering so card is fully laid out and we get correct width
+    requestAnimationFrame(() => _renderDailyChartInner(fromKey, data));
+  }
+
+  function _renderDailyChartInner(fromKey, data) {
+
+    // Build daily totals across entire filtered dataset
+    const byDay = {};
+    data.forEach(r => {
+      const day = r.mserp_transdate ? r.mserp_transdate.split("T")[0] : null;
+      if (!day) return;
+      if (!byDay[day]) byDay[day] = 0;
+      byDay[day] += -(parseFloat(r.mserp_netamount) || 0);
+    });
+
+    const days = Object.keys(byDay).sort();
+    if (days.length === 0) { closeDailyChart(); return; }
+
+    const from = document.getElementById("month-from").value;
+    const to   = document.getElementById("month-to").value;
+    const rangeLabel = (from && to && from !== to)
+      ? `${formatMonth(from)} — ${formatMonth(to)}`
+      : from ? formatMonth(from) : "All";
+
+    document.getElementById("daily-chart-month-label").textContent = rangeLabel;
+
+    const dayLabels = days.map(d => d); // use raw date string as label key
+    const dayValues = days.map(d => byDay[d]);
+    const currency  = data[0]?.mserp_currency || "";
+
+    // 120px per day — plenty of room, always scrollable
+    const wrapper = document.getElementById("daily-chart-wrap");
+    const totalWidth = days.length * 120;
+
+    const canvas = document.getElementById("chart-daily-sales");
+    canvas.style.width = totalWidth + "px";
+    canvas.style.height = "360px";
+
+    renderChart("chart-daily-sales", "line", {
+      labels: dayLabels,
+      datasets: [{
+        label: "Daily Sales",
+        data: dayValues,
+        borderColor: "rgba(99,102,241,1)",
+        backgroundColor: "rgba(99,102,241,0.07)",
+        fill: true,
+        tension: 0.4,
+        pointRadius: 3,
+        pointBackgroundColor: "rgba(99,102,241,1)",
+        pointHoverRadius: 6,
+        pointHoverBackgroundColor: "#6366f1",
+        borderWidth: 2,
+      }]
+    }, {
+      responsive: true,
+      maintainAspectRatio: false,
+      onClick: (e, els) => {
+        if (!els.length) return;
+        const day = days[els[0].index];
+        openTxnPanel(day);
+      },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            title: ctx => ctx[0].label,
+            label: ctx => "  " + fmt(ctx.parsed.y, currency)
+          }
+        }
+      },
+      scales: {
+        x: {
+          grid: { color: "rgba(0,0,0,0.04)" },
+          ticks: {
+            color: "#6b7280",
+            font: { size: 11 },
+            maxRotation: 0,
+            autoSkip: false,
+            callback: function(val, index) {
+              const d = new Date(days[index] + "T00:00:00");
+              const day = d.getDate();
+              const mon = d.toLocaleString("default", { month: "short" });
+              if (day === 1) return mon;
+              if (day % 5 === 0) return day;
+              return "";
+            }
+          }
+        },
+        y: {
+          grid: { color: "rgba(0,0,0,0.05)" },
+          ticks: { color: "#6b7280", font: { size: 11 }, callback: v => fmtShort(v) }
+        }
+      }
+    });
+  }
+
+  function closeDailyChart() {
+    document.getElementById("daily-chart-card").style.display = "none";
+    if (charts["chart-daily-sales"]) {
+      charts["chart-daily-sales"].destroy();
+      delete charts["chart-daily-sales"];
+    }
+  }
+
+  function renderChart(id, type, data, options) {
+    if (charts[id]) charts[id].destroy();
+    const ctx = document.getElementById(id).getContext("2d");
+    charts[id] = new Chart(ctx, {
+      type,
+      data,
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        animation: { duration: 400 },
+        ...options,
+        plugins: {
+          ...(options.plugins || {}),
+          tooltip: {
+            backgroundColor: "#ffffff",
+            borderColor: "#e9ecef",
+            borderWidth: 1,
+            titleColor: "#111827",
+            bodyColor: "#6b7280",
+            padding: 10,
+          }
+        }
+      }
+    });
+  }
+
+  // ── Helpers ──
+  function toMonthKey(dt) {
+    if (!dt) return null;
+    const d = new Date(dt);
+    if (isNaN(d)) return null;
+    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}`;
+  }
+  function formatMonth(mk) {
+    if (!mk) return "";
+    const [y, m] = mk.split("-");
+    return new Date(y, m-1).toLocaleString("default", { month: "short", year: "numeric" });
+  }
+  function fmtDate(dt) {
+    if (!dt) return "";
+    return new Date(dt).toLocaleDateString();
+  }
+  function fmt(n, currency) {
+    if (isNaN(n)) return "—";
+    return new Intl.NumberFormat("en", { style: "currency", currency: currency || "USD",
+      maximumFractionDigits: 0 }).format(n);
+  }
+  function fmtNum(n) {
+    return new Intl.NumberFormat("en").format(Math.round(n));
+  }
+  function fmtShort(n) {
+    if (Math.abs(n) >= 1e6) return (n/1e6).toFixed(1) + "M";
+    if (Math.abs(n) >= 1e3) return (n/1e3).toFixed(0) + "K";
+    return n;
+  }
+  // ── Transaction panel ──
+  let txnData = [];
+  let txnSortKey = "mserp_transdate";
+  let txnSortAsc = false;
+  let txnFiltered = [];
+
+  function openTxnPanel(dayFilter) {
+    const from  = document.getElementById("month-from").value;
+    const to    = document.getElementById("month-to").value;
+    const store = document.getElementById("store-filter").value;
+    let data = rawData;
+    if (from)      data = data.filter(r => toMonthKey(r.mserp_transdate) >= from);
+    if (to)        data = data.filter(r => toMonthKey(r.mserp_transdate) <= to);
+    if (store)     data = data.filter(r => r.mserp_store === store);
+    if (dayFilter) data = data.filter(r => r.mserp_transdate && r.mserp_transdate.split("T")[0] === dayFilter);
+
+    txnData = data;
+    txnFiltered = [...data];
+    document.getElementById("txn-panel-title").textContent = dayFilter ? `Transactions — ${fmtDate(dayFilter)}` : "Transactions";
+    document.getElementById("txn-panel-sub").textContent = `${data.length} records`;
+    document.getElementById("txn-search").value = "";
+    renderTxnGrid();
+
+    document.getElementById("txn-overlay").style.display = "block";
+    setTimeout(() => document.getElementById("txn-panel").style.right = "0", 10);
+  }
+
+  function closeTxnPanel() {
+    document.getElementById("txn-panel").style.right = "-680px";
+    document.getElementById("txn-overlay").style.display = "none";
+  }
+
+  function filterTxnGrid() {
+    const q = document.getElementById("txn-search").value.toLowerCase();
+    txnFiltered = txnData.filter(r =>
+      !q ||
+      (r.mserp_transactionid || "").toLowerCase().includes(q) ||
+      (r.mserp_store || "").toLowerCase().includes(q) ||
+      (r.mserp_itemid || "").toLowerCase().includes(q) ||
+      (r.mserp_terminalid || "").toLowerCase().includes(q)
+    );
+    renderTxnGrid();
+  }
+
+  function sortTxn(key) {
+    if (txnSortKey === key) txnSortAsc = !txnSortAsc;
+    else { txnSortKey = key; txnSortAsc = true; }
+    renderTxnGrid();
+  }
+
+  function renderTxnGrid() {
+    const currency = rawData[0]?.mserp_currency || "";
+
+    // Deduplicate by transaction ID — sum qty and netamount
+    const txnMap = {};
+    txnFiltered.forEach(r => {
+      const id = r.mserp_transactionid || "—";
+      if (!txnMap[id]) {
+        txnMap[id] = {
+          mserp_transactionid: id,
+          mserp_transdate:     r.mserp_transdate,
+          mserp_store:         r.mserp_store,
+          mserp_terminalid:    r.mserp_terminalid,
+          mserp_itemid:        r.mserp_itemid,
+          mserp_qty:           0,
+          mserp_netamount:     0,
+          lineCount:           0
+        };
+      }
+      txnMap[id].mserp_qty        += parseFloat(r.mserp_qty) || 0;
+      txnMap[id].mserp_netamount  += parseFloat(r.mserp_netamount) || 0;
+      txnMap[id].lineCount        += 1;
+    });
+
+    const deduped = Object.values(txnMap);
+
+    const sorted = deduped.sort((a, b) => {
+      const av = a[txnSortKey] ?? "";
+      const bv = b[txnSortKey] ?? "";
+      return txnSortAsc ? (av > bv ? 1 : -1) : (av < bv ? 1 : -1);
+    });
+
+    const rows = sorted.map(r => `
+      <tr style="border-bottom:1px solid #f3f4f6; cursor:default" onmouseover="this.style.background='#f8f9fa'" onmouseout="this.style.background=''">
+        <td style="padding:11px 14px; color:#6366f1; font-family:'Space Mono',monospace; font-size:13px; white-space:nowrap">${esc(r.mserp_transactionid)}</td>
+        <td style="padding:11px 14px; color:#374151; font-size:13px; white-space:nowrap">${r.mserp_transdate ? fmtDate(r.mserp_transdate) : "—"}</td>
+        <td style="padding:11px 14px; color:#374151; font-size:13px; white-space:nowrap">${esc(r.mserp_store || "—")}</td>
+        <td style="padding:11px 14px; color:#374151; font-size:13px; white-space:nowrap">${esc(r.mserp_terminalid || "—")}</td>
+        <td style="padding:11px 14px; color:#374151; font-size:13px; white-space:nowrap">
+          ${r.lineCount > 1 ? `<span style="color:#9ca3af;font-size:11px">${r.lineCount} items</span>` : esc(r.mserp_itemid || "—")}
+        </td>
+        <td style="padding:11px 14px; text-align:right; color:#374151; font-family:'Space Mono',monospace; font-size:13px">${fmtNum(-(r.mserp_qty))}</td>
+        <td style="padding:11px 14px; text-align:right; font-family:'Space Mono',monospace; font-weight:600; font-size:13px; color:#111827; white-space:nowrap">${fmt(-(r.mserp_netamount), currency)}</td>
+      </tr>`).join("");
+
+    document.getElementById("txn-tbody").innerHTML = rows || '<tr><td colspan="7" style="padding:32px; text-align:center; color:#9ca3af">No records found</td></tr>';
+    document.getElementById("txn-count-label").textContent = `${sorted.length} unique transactions (${txnFiltered.length} line items)`;
+  }
+
+  function esc(v) {
+    if (!v) return "";
+    return String(v).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+  }
+  function showLoadingState() {
+    document.getElementById("store-table-wrap").innerHTML =
+      '<div class="state-box"><div class="spinner"></div><span>Fetching data…</span></div>';
+  }
+  function showError(msg) {
+    document.getElementById("store-table-wrap").innerHTML =
+      `<div class="state-box"><div class="error-msg">⚠ ${esc(msg)}</div></div>`;
+  }
+</script>
+</body>
+</html>
