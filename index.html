@@ -733,7 +733,7 @@ function generateCXML(items) {
     </From>
     <To>
       <Credential domain="DUNS">
-        <Identity>${SESSION.buyerIdentity}</Identity>
+        <Identity>D365FO</Identity>
       </Credential>
     </To>
     <Sender>
@@ -761,7 +761,7 @@ function generateCXML(items) {
 const _params = new URLSearchParams(window.location.search);
 const SESSION = {
   buyerCookie   : decodeURIComponent(_params.get('cookie')    || 'MISSING'),
-  returnUrl     : decodeURIComponent(_params.get('returnUrl') || 'MISSING'),
+  returnUrl     : decodeURIComponent(_params.get('returnUrl') || 'MISSING')
 };
 
 // Update banner with real BuyerCookie
