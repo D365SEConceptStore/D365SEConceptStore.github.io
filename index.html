@@ -762,7 +762,6 @@ const _params = new URLSearchParams(window.location.search);
 const SESSION = {
   buyerCookie   : decodeURIComponent(_params.get('cookie')    || 'MISSING'),
   returnUrl     : decodeURIComponent(_params.get('returnUrl') || 'MISSING'),
-  buyerIdentity : 'usrt'
 };
 
 // Update banner with real BuyerCookie
