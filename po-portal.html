@@ -335,10 +335,12 @@
     <div class="search-wrap">
       <input type="text" class="search-input" id="search-input" placeholder="Search PO, vendor, item…" oninput="applyFilters()"/>
     </div>
-    <select id="vendor-filter" onchange="applyFilters()">
-      <option value="">All vendors</option>
-    </select>
-    <select id="company-filter" onchange="applyFilters()">
+    <div class="search-wrap" style="position:relative">
+      <input type="text" class="search-input" id="vendor-search" placeholder="Filter by vendor name or code…" oninput="onVendorSearch()" autocomplete="off"/>
+      <button onclick="clearVendorFilter()" title="Clear vendor filter" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--text-faint);cursor:pointer;font-size:14px;padding:2px 4px;line-height:1">✕</button>
+      <div id="vendor-dropdown" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--card);border:1px solid var(--border);border-radius:8px;z-index:50;max-height:220px;overflow-y:auto;margin-top:4px;box-shadow:0 8px 24px rgba(0,0,0,.3)"></div>
+    </div>
+    <select id="company-filter" onchange="populateFilters();applyFilters()">
       <option value="">All companies</option>
     </select>
     <select id="currency-filter" onchange="applyFilters()">
@@ -404,7 +406,7 @@
         <thead>
           <tr>
             <th onclick="sortTable('mserp_purchaseordernumber')">PO Number ↕</th>
-            <th onclick="sortTable('mserp_ordervendoraccountnumber')">Vendor ↕</th>
+            <th onclick="sortTable('mserp_vendororganizationname')">Vendor ↕</th>
             <th onclick="sortTable('mserp_purchaseorderstatus')">Status ↕</th>
             <th onclick="sortTable('mserp_accountingdate')">Order Date ↕</th>
             <th onclick="sortTable('mserp_confirmeddeliverydate')">Confirmed Delivery ↕</th>
@@ -466,6 +468,7 @@
   let sortKey = "mserp_accountingdate";
   let sortAsc = false;
   let activeStatus = "";
+  let activeVendorCode = "";
 
   // Status map
   const STATUS_MAP = {
@@ -534,10 +537,10 @@
     showLoading();
 
     try {
-      const token = await getToken();
       const fields = [
         "mserp_purchaseordernumber",
         "mserp_ordervendoraccountnumber",
+        "mserp_vendororganizationname",
         "mserp_purchaseorderstatus",
         "mserp_documentapprovalstatus",
         "mserp_accountingdate",
@@ -559,14 +562,20 @@
         "mserp_reasoncomment",
       ].join(",");
 
-      let url = `${D365_URL}/api/data/v9.2/${ENTITY}?$select=${fields}&$top=${PAGE}`;
+      // Note: no $top here — let the server page via odata.maxpagesize only.
+      // $top on F&O virtual entities can conflict with server-side paging.
+      let url = `${D365_URL}/api/data/v9.2/${ENTITY}?$select=${fields}&$orderby=mserp_accountingdate desc`;
       rawData = [];
       let page = 0;
 
       while (url) {
         page++;
         updateLoadingMsg(`Fetching page ${page} — ${rawData.length} orders so far…`);
-        const res = await fetch(url, {
+
+        // Refresh token every page — avoids expiry on large datasets
+        const token = await getToken();
+
+        let res = await fetch(url, {
           headers: {
             "Authorization": `Bearer ${token}`,
             "Accept": "application/json",
@@ -575,6 +584,25 @@
             "Prefer": `odata.maxpagesize=${PAGE}`
           }
         });
+
+        // On 401, force a fresh token and retry once
+        if (res.status === 401) {
+          const freshToken = await msalInstance
+            .acquireTokenSilent({ ...loginRequest, account: currentAccount, forceRefresh: true })
+            .then(r => r.accessToken)
+            .catch(() => null);
+          if (!freshToken) throw new Error("Session expired. Please sign in again.");
+          res = await fetch(url, {
+            headers: {
+              "Authorization": `Bearer ${freshToken}`,
+              "Accept": "application/json",
+              "OData-MaxVersion": "4.0",
+              "OData-Version": "4.0",
+              "Prefer": `odata.maxpagesize=${PAGE}`
+            }
+          });
+        }
+
         if (!res.ok) throw new Error(`${res.status} — ${await res.text()}`);
         const json = await res.json();
         rawData = rawData.concat(json.value || []);
@@ -593,21 +621,105 @@
   }
 
   function populateFilters() {
-    const vendors = [...new Set(rawData.map(r => r.mserp_ordervendoraccountnumber).filter(Boolean))].sort();
-    document.getElementById("vendor-filter").innerHTML =
-      '<option value="">All vendors</option>' +
-      vendors.map(v => `<option value="${v}">${v}</option>`).join("");
+    const selectedCompany  = document.getElementById("company-filter").value;
+    const selectedCurrency = document.getElementById("currency-filter").value;
 
+    // ── Vendors: only show vendors that have POs in the selected company ──
+    const vendorBase = selectedCompany
+      ? rawData.filter(r => r.mserp_dataareaid === selectedCompany)
+      : rawData;
+    const vendorMap = {};
+    vendorBase.forEach(r => {
+      const code = r.mserp_ordervendoraccountnumber;
+      if (code && !vendorMap[code]) {
+        vendorMap[code] = r.mserp_vendororganizationname || code;
+      }
+    });
+    window._allVendors = Object.entries(vendorMap)
+      .map(([code, name]) => ({ code, name, label: name !== code ? `${name} (${code})` : code }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+
+    // If active vendor no longer in filtered list, clear it
+    if (activeVendorCode && !vendorMap[activeVendorCode]) {
+      activeVendorCode = "";
+      document.getElementById("vendor-search").value = "";
+    }
+
+    // ── Companies: always show all (driven by full dataset) ──
     const companies = [...new Set(rawData.map(r => r.mserp_dataareaid).filter(Boolean))].sort();
     document.getElementById("company-filter").innerHTML =
       '<option value="">All companies</option>' +
-      companies.map(c => `<option value="${c}">${c}</option>`).join("");
+      companies.map(c => `<option value="${c}" ${c === selectedCompany ? "selected" : ""}>${c}</option>`).join("");
 
-    const currencies = [...new Set(rawData.map(r => r.mserp_currencycode).filter(Boolean))].sort();
+    // ── Currencies: filter by company + vendor if active ──
+    const currencyBase = rawData.filter(r => {
+      if (selectedCompany && r.mserp_dataareaid !== selectedCompany) return false;
+      if (activeVendorCode && r.mserp_ordervendoraccountnumber !== activeVendorCode) return false;
+      return true;
+    });
+    const currencies = [...new Set(currencyBase.map(r => r.mserp_currencycode).filter(Boolean))].sort();
     document.getElementById("currency-filter").innerHTML =
       '<option value="">All currencies</option>' +
-      currencies.map(c => `<option value="${c}">${c}</option>`).join("");
+      currencies.map(c => `<option value="${c}" ${c === selectedCurrency ? "selected" : ""}>${c}</option>`).join("");
   }
+
+  // ── VENDOR SEARCH ──────────────────────────────────────────────
+  function onVendorSearch() {
+    const q = (document.getElementById("vendor-search").value || "").toLowerCase().trim();
+    const dd = document.getElementById("vendor-dropdown");
+
+    // If cleared, reset filter
+    if (!q) {
+      activeVendorCode = "";
+      dd.style.display = "none";
+      applyFilters();
+      return;
+    }
+
+    const matches = (window._allVendors || []).filter(v =>
+      v.name.toLowerCase().includes(q) || v.code.toLowerCase().includes(q)
+    ).slice(0, 20);
+
+    if (!matches.length) {
+      dd.style.display = "none";
+      activeVendorCode = "";
+      applyFilters();
+      return;
+    }
+
+    dd.innerHTML = matches.map(v => `
+      <div onclick="selectVendor('${v.code.replace(/'/g,"\\'")}','${v.label.replace(/'/g,"\\'")}')"
+           style="padding:9px 14px;cursor:pointer;font-size:12px;border-bottom:1px solid var(--border);transition:background .1s"
+           onmouseover="this.style.background='var(--card-alt)'" onmouseout="this.style.background=''">
+        <span style="font-weight:600">${esc(v.name)}</span>
+        <span style="color:var(--text-faint);font-family:var(--mono);font-size:10px;margin-left:6px">${esc(v.code)}</span>
+      </div>`).join("");
+    dd.style.display = "block";
+  }
+
+  function selectVendor(code, label) {
+    activeVendorCode = code;
+    document.getElementById("vendor-search").value = label;
+    document.getElementById("vendor-dropdown").style.display = "none";
+    populateFilters();
+    applyFilters();
+  }
+
+  function clearVendorFilter() {
+    activeVendorCode = "";
+    document.getElementById("vendor-search").value = "";
+    document.getElementById("vendor-dropdown").style.display = "none";
+    populateFilters();
+    applyFilters();
+  }
+
+  // Close dropdown when clicking outside
+  document.addEventListener("click", e => {
+    if (!e.target.closest("#vendor-search") && !e.target.closest("#vendor-dropdown")) {
+      document.getElementById("vendor-dropdown").style.display = "none";
+    }
+  });
+  // ───────────────────────────────────────────────────────────────
 
   function setStatusFilter(el, status) {
     document.querySelectorAll(".sf-pill").forEach(p => p.classList.remove("active"));
@@ -617,20 +729,20 @@
   }
 
   function applyFilters() {
-    const q       = (document.getElementById("search-input").value || "").toLowerCase();
-    const vendor  = document.getElementById("vendor-filter").value;
-    const company = document.getElementById("company-filter").value;
-    const currency= document.getElementById("currency-filter").value;
+    const q        = (document.getElementById("search-input").value || "").toLowerCase();
+    const company  = document.getElementById("company-filter").value;
+    const currency = document.getElementById("currency-filter").value;
 
     filtered = rawData.filter(r => {
       if (activeStatus && String(r.mserp_purchaseorderstatus) !== activeStatus) return false;
-      if (vendor   && r.mserp_ordervendoraccountnumber !== vendor) return false;
+      if (activeVendorCode && r.mserp_ordervendoraccountnumber !== activeVendorCode) return false;
       if (company  && r.mserp_dataareaid !== company) return false;
       if (currency && r.mserp_currencycode !== currency) return false;
       if (q) {
         const hay = [
           r.mserp_purchaseordernumber,
           r.mserp_ordervendoraccountnumber,
+          r.mserp_vendororganizationname,
           r.mserp_purchaseordername,
           r.mserp_projectid,
           r.mserp_deliveryaddressname,
@@ -716,8 +828,8 @@
       return `<tr style="cursor:pointer" onclick="openPOPanel(${JSON.stringify(r).replace(/"/g,'&quot;')})">
         <td class="td-mono td-bold" style="color:var(--accent)">${esc(r.mserp_purchaseordernumber || "—")}</td>
         <td>
-          <div class="td-bold">${esc(r.mserp_ordervendoraccountnumber || "—")}</div>
-          ${r.mserp_purchaseordername ? `<div class="td-muted">${esc(r.mserp_purchaseordername)}</div>` : ""}
+          <div class="td-bold">${esc(r.mserp_vendororganizationname || r.mserp_ordervendoraccountnumber || "—")}</div>
+          ${r.mserp_ordervendoraccountnumber ? `<div class="td-muted">${esc(r.mserp_ordervendoraccountnumber)}</div>` : ""}
         </td>
         <td><span class="badge ${status.cls}">${status.label}</span></td>
         <td class="td-mono td-muted">${fmtDate(r.mserp_accountingdate)}</td>
@@ -743,7 +855,10 @@
     const isOverdue = delivDate !== "—" && delivDate < today && String(r.mserp_purchaseorderstatus) === "200000001";
 
     document.getElementById("panel-po-id").textContent = r.mserp_purchaseordernumber || "—";
-    document.getElementById("panel-vendor").textContent = r.mserp_ordervendoraccountnumber || "—";
+    document.getElementById("panel-vendor").textContent =
+      r.mserp_vendororganizationname
+        ? `${r.mserp_vendororganizationname} (${r.mserp_ordervendoraccountnumber || "—"})`
+        : r.mserp_ordervendoraccountnumber || "—";
     document.getElementById("panel-meta").innerHTML =
       `<span class="badge ${status.cls}">${status.label}</span>&nbsp;&nbsp;${r.mserp_currencycode || ""}`;
 

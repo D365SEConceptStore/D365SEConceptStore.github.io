@@ -558,7 +558,6 @@ async function signIn() {
 }
 
 function signOut() {
-  try { localStorage.removeItem("ops_portal_theme"); } catch(e) {}
   const logoutRequest = {
     account: currentAccount,
     postLogoutRedirectUri: location.href.split("?")[0].split("#")[0],
