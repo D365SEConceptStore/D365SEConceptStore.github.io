@@ -332,13 +332,8 @@
         <div class="page-sub" id="data-range-label">—</div>
       </div>
     </div>
-    <div class="search-wrap">
-      <input type="text" class="search-input" id="search-input" placeholder="Search PO, vendor, item…" oninput="applyFilters()"/>
-    </div>
     <div class="search-wrap" style="position:relative">
-      <input type="text" class="search-input" id="vendor-search" placeholder="Filter by vendor name or code…" oninput="onVendorSearch()" autocomplete="off"/>
-      <button onclick="clearVendorFilter()" title="Clear vendor filter" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);background:none;border:none;color:var(--text-faint);cursor:pointer;font-size:14px;padding:2px 4px;line-height:1">✕</button>
-      <div id="vendor-dropdown" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--card);border:1px solid var(--border);border-radius:8px;z-index:50;max-height:220px;overflow-y:auto;margin-top:4px;box-shadow:0 8px 24px rgba(0,0,0,.3)"></div>
+      <input type="text" class="search-input" id="search-input" placeholder="Search PO number, vendor name, code…" oninput="applyFilters()" autocomplete="off"/>
     </div>
     <select id="company-filter" onchange="populateFilters();applyFilters()">
       <option value="">All companies</option>
@@ -621,8 +616,8 @@
         const BATCH = 50;
         for (let i = 0; i < uniqueAccounts.length; i += BATCH) {
           const batch = uniqueAccounts.slice(i, i + BATCH);
-          const filterStr = batch.map(a => `mserp_vendoraccountnumber eq '${a.replace(/'/g,"''")}'`).join(" or ");
-          const vendorUrl = `${D365_URL}/api/data/v9.2/mserp_vendvendorv2entities?$select=mserp_vendoraccountnumber,mserp_vendororganizationname,mserp_dataareaid&$filter=${encodeURIComponent(filterStr)}`;
+          const filterStr = batch.map(a => `mserp_accountnum eq '${a.replace(/'/g,"''")}'`).join(" or ");
+          const vendorUrl = `${D365_URL}/api/data/v9.2/mserp_vendvendorv2entities?$select=mserp_accountnum,mserp_vendororganizationname,mserp_dataareaid&$filter=${encodeURIComponent(filterStr)}`;
           const vRes = await fetch(vendorUrl, {
             headers: {
               "Authorization": `Bearer ${vendorToken}`,
@@ -634,10 +629,10 @@
           if (vRes.ok) {
             const vJson = await vRes.json();
             (vJson.value || []).forEach(v => {
-              const key = `${v.mserp_vendoraccountnumber}__${v.mserp_dataareaid}`;
-              vendorMap[key] = v.mserp_vendororganizationname || v.mserp_vendoraccountnumber;
-              if (!vendorMap[v.mserp_vendoraccountnumber]) {
-                vendorMap[v.mserp_vendoraccountnumber] = v.mserp_vendororganizationname || v.mserp_vendoraccountnumber;
+              const key = `${v.mserp_accountnum}__${v.mserp_dataareaid}`;
+              vendorMap[key] = v.mserp_vendororganizationname || v.mserp_accountnum;
+              if (!vendorMap[v.mserp_accountnum]) {
+                vendorMap[v.mserp_accountnum] = v.mserp_vendororganizationname || v.mserp_accountnum;
               }
             });
           }
@@ -689,7 +684,6 @@
     // If active vendor no longer in filtered list, clear it
     if (activeVendorCode && !vendorMap[activeVendorCode]) {
       activeVendorCode = "";
-      document.getElementById("vendor-search").value = "";
     }
 
     // ── Companies: always show all (driven by full dataset) ──
@@ -710,62 +704,23 @@
       currencies.map(c => `<option value="${c}" ${c === selectedCurrency ? "selected" : ""}>${c}</option>`).join("");
   }
 
-  // ── VENDOR SEARCH ──────────────────────────────────────────────
-  function onVendorSearch() {
-    const q = (document.getElementById("vendor-search").value || "").toLowerCase().trim();
-    const dd = document.getElementById("vendor-dropdown");
-
-    // If cleared, reset filter
-    if (!q) {
-      activeVendorCode = "";
-      dd.style.display = "none";
-      applyFilters();
-      return;
-    }
-
-    const matches = (window._allVendors || []).filter(v =>
-      v.name.toLowerCase().includes(q) || v.code.toLowerCase().includes(q)
-    ).slice(0, 20);
-
-    if (!matches.length) {
-      dd.style.display = "none";
-      activeVendorCode = "";
-      applyFilters();
-      return;
-    }
-
-    dd.innerHTML = matches.map(v => `
-      <div onclick="selectVendor('${v.code.replace(/'/g,"\\'")}','${v.label.replace(/'/g,"\\'")}')"
-           style="padding:9px 14px;cursor:pointer;font-size:12px;border-bottom:1px solid var(--border);transition:background .1s"
-           onmouseover="this.style.background='var(--card-alt)'" onmouseout="this.style.background=''">
-        <span style="font-weight:600">${esc(v.name)}</span>
-        <span style="color:var(--text-faint);font-family:var(--mono);font-size:10px;margin-left:6px">${esc(v.code)}</span>
-      </div>`).join("");
-    dd.style.display = "block";
-  }
+  // ── VENDOR FILTER (driven by single search box) ────────────────
+  // No separate vendor search input — the main search-input handles
+  // free-text across PO number, vendor name, vendor code, etc.
+  // activeVendorCode is still used when company filter changes to
+  // restrict the vendor list, but is no longer set via a separate input.
 
   function selectVendor(code, label) {
     activeVendorCode = code;
-    document.getElementById("vendor-search").value = label;
-    document.getElementById("vendor-dropdown").style.display = "none";
     populateFilters();
     applyFilters();
   }
 
   function clearVendorFilter() {
     activeVendorCode = "";
-    document.getElementById("vendor-search").value = "";
-    document.getElementById("vendor-dropdown").style.display = "none";
     populateFilters();
     applyFilters();
   }
-
-  // Close dropdown when clicking outside
-  document.addEventListener("click", e => {
-    if (!e.target.closest("#vendor-search") && !e.target.closest("#vendor-dropdown")) {
-      document.getElementById("vendor-dropdown").style.display = "none";
-    }
-  });
   // ───────────────────────────────────────────────────────────────
 
   function setStatusFilter(el, status) {
