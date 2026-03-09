@@ -690,6 +690,9 @@
   }
 
   // ── Data loading ──
+  // Debounce timer for filter changes
+  let filterTimer = null;
+
   async function loadData() {
     const btn = document.getElementById("refresh-btn");
     btn.textContent = "Loading…"; btn.disabled = true;
@@ -699,12 +702,11 @@
     try {
       const token = await getToken();
 
-      // Fields matching the columns shown in the screenshot
+      // Only fields actually used in the UI — heavy text fields removed
       const fields = [
         "opportunityid",
         "name",
         "salesstage",
-        "stageid",
         "statuscode",
         "statecode",
         "estimatedvalue",
@@ -715,36 +717,34 @@
         "totaldiscountamount",
         "discountpercentage",
         "budgetamount",
-        "totalamountlessfreight",
         "freightamount",
         "totaltax",
         "_ownerid_value",
         "_customerid_value",
         "_accountid_value",
-        "_parentcontactid_value",
         "prioritycode",
-        "purchasetimeframe",
-        "purchaseprocess",
         "msdyn_forecastcategory",
         "msdyn_opportunityscore",
         "msdyn_opportunitygrade",
         "msdyn_opportunityscoretrend",
-        "description",
-        "customerneed",
-        "currentsituation",
-        "proposedsolution",
         "decisionmaker",
         "confirminterest",
         "createdon",
         "modifiedon",
         "actualclosedate",
         "actualvalue",
-        "isrevenuesystemcalculated",
         "opportunityratingcode"
       ].join(",");
 
-      const PAGE = 1000;
-      let url = `${D365_URL}/api/data/v9.2/${ENTITY}?$select=${fields}&$top=${PAGE}`;
+      // Server-side filter: active opportunities only (statecode 0)
+      // + won/lost from current year so win-rate chart is meaningful
+      const thisYear = new Date().getFullYear();
+      const serverFilter = encodeURIComponent(
+        `statecode eq 0 or (statecode ne 0 and createdon ge ${thisYear}-01-01)`
+      );
+
+      const PAGE = 500; // smaller pages = first page renders faster
+      let url = `${D365_URL}/api/data/v9.2/${ENTITY}?$select=${fields}&$filter=${serverFilter}&$orderby=estimatedvalue desc&$top=${PAGE}`;
       rawData = [];
       let page = 0;
 
@@ -759,7 +759,8 @@
             "Accept": "application/json",
             "OData-MaxVersion": "4.0",
             "OData-Version": "4.0",
-            "Prefer": `odata.maxpagesize=${PAGE}`
+            // Smaller page size + annotations for formatted OptionSet labels in one request
+            "Prefer": `odata.maxpagesize=${PAGE},odata.include-annotations="OData.Community.Display.V1.FormattedValue"`
           }
         });
         if (!res.ok) throw new Error(`${res.status} — ${await res.text()}`);
@@ -810,6 +811,11 @@
   }
 
   function applyFilters() {
+    clearTimeout(filterTimer);
+    filterTimer = setTimeout(_doApplyFilters, 150);
+  }
+
+  function _doApplyFilters() {
     const stage = document.getElementById("stage-filter").value;
     const owner = document.getElementById("owner-filter").value;
     const year  = document.getElementById("year-filter").value;
@@ -921,7 +927,7 @@
       </div>`).join("")
     : `<div class="stage-step" style="grid-column:1/-1"><div class="stage-num" style="color:var(--text-faint)">No stage data</div></div>`;
 
-    // ── Status donut ──
+    // ── Status donut — update in-place if chart already exists ──
     const COLORS = ["#4f8eff", "#34d399", "#f87171", "#fbbf24", "#a78bfa"];
     const statusMap = {};
     data.forEach(r => {
@@ -932,25 +938,27 @@
     const sLabels = Object.keys(statusMap);
     const sVals   = sLabels.map(l => statusMap[l]);
 
-    if (charts["chart-status"]) charts["chart-status"].destroy();
-    const ctx = document.getElementById("chart-status").getContext("2d");
-    charts["chart-status"] = new Chart(ctx, {
-      type: "doughnut",
-      data: {
-        labels: sLabels,
-        datasets: [{ data: sVals, backgroundColor: COLORS, borderWidth: 0, hoverOffset: 6 }]
-      },
-      options: {
-        responsive: true, maintainAspectRatio: false, animation: { duration: 500 },
-        cutout: "62%",
-        plugins: {
-          legend: { position: "right", labels: { color: "#8891a8", font: { size: 11 }, padding: 14, boxWidth: 10 } },
-          tooltip: { backgroundColor: "#181b24", borderColor: "#2a2f3e", borderWidth: 1, titleColor: "#e8eaf0", bodyColor: "#8891a8", padding: 10 }
+    if (charts["chart-status"]) {
+      charts["chart-status"].data.labels = sLabels;
+      charts["chart-status"].data.datasets[0].data = sVals;
+      charts["chart-status"].update("active");
+    } else {
+      const ctx = document.getElementById("chart-status").getContext("2d");
+      charts["chart-status"] = new Chart(ctx, {
+        type: "doughnut",
+        data: { labels: sLabels, datasets: [{ data: sVals, backgroundColor: COLORS, borderWidth: 0, hoverOffset: 6 }] },
+        options: {
+          responsive: true, maintainAspectRatio: false, animation: { duration: 400 },
+          cutout: "62%",
+          plugins: {
+            legend: { position: "right", labels: { color: "var(--text-dim)", font: { size: 11 }, padding: 14, boxWidth: 10 } },
+            tooltip: { backgroundColor: "var(--card)", borderColor: "var(--border)", borderWidth: 1, titleColor: "var(--text)", bodyColor: "var(--text-dim)", padding: 10 }
+          }
         }
-      }
-    });
+      });
+    }
 
-    // ── Close by month bar chart ──
+    // ── Close by month bar — update in-place if chart already exists ──
     const byMonth = {};
     open.forEach(r => {
       if (!r.estimatedclosedate) return;
@@ -960,37 +968,46 @@
       byMonth[mk] += parseFloat(r.estimatedvalue) || 0;
     });
     const months = Object.keys(byMonth).sort();
+    const monthLabels = months.map(m => formatMonth(m));
+    const monthVals   = months.map(m => byMonth[m]);
 
-    if (charts["chart-close-month"]) charts["chart-close-month"].destroy();
-    const ctx2 = document.getElementById("chart-close-month").getContext("2d");
-    charts["chart-close-month"] = new Chart(ctx2, {
-      type: "bar",
-      data: {
-        labels: months.map(m => formatMonth(m)),
-        datasets: [{
-          label: "Est. Value Closing",
-          data: months.map(m => byMonth[m]),
-          backgroundColor: "rgba(79,142,255,0.65)",
-          borderColor: "#4f8eff",
-          borderWidth: 1,
-          borderRadius: 4,
-          hoverBackgroundColor: "rgba(79,142,255,0.9)"
-        }]
-      },
-      options: {
-        responsive: true, maintainAspectRatio: false, animation: { duration: 500 },
-        plugins: {
-          legend: { display: false },
-          tooltip: { backgroundColor: "#181b24", borderColor: "#2a2f3e", borderWidth: 1, titleColor: "#e8eaf0", bodyColor: "#8891a8", padding: 10,
-            callbacks: { label: ctx => "  " + fmtCur(ctx.parsed.y) }
-          }
+    if (charts["chart-close-month"]) {
+      charts["chart-close-month"].data.labels = monthLabels;
+      charts["chart-close-month"].data.datasets[0].data = monthVals;
+      charts["chart-close-month"].update("active");
+    } else {
+      const ctx2 = document.getElementById("chart-close-month").getContext("2d");
+      charts["chart-close-month"] = new Chart(ctx2, {
+        type: "bar",
+        data: {
+          labels: monthLabels,
+          datasets: [{
+            label: "Est. Value Closing",
+            data: monthVals,
+            backgroundColor: "rgba(79,142,255,0.65)",
+            borderColor: "#4f8eff",
+            borderWidth: 1,
+            borderRadius: 4,
+            hoverBackgroundColor: "rgba(79,142,255,0.9)"
+          }]
         },
-        scales: {
-          x: { grid: { color: "rgba(255,255,255,0.04)" }, ticks: { color: "#4b5268", font: { size: 11 } } },
-          y: { grid: { color: "rgba(255,255,255,0.05)" }, ticks: { color: "#4b5268", font: { size: 11 }, callback: v => fmtShort(v) } }
+        options: {
+          responsive: true, maintainAspectRatio: false, animation: { duration: 400 },
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              backgroundColor: "var(--card)", borderColor: "var(--border)", borderWidth: 1,
+              titleColor: "var(--text)", bodyColor: "var(--text-dim)", padding: 10,
+              callbacks: { label: ctx => "  " + fmtCur(ctx.parsed.y) }
+            }
+          },
+          scales: {
+            x: { grid: { color: "rgba(128,128,128,0.08)" }, ticks: { color: "var(--text-faint)", font: { size: 11 } } },
+            y: { grid: { color: "rgba(128,128,128,0.08)" }, ticks: { color: "var(--text-faint)", font: { size: 11 }, callback: v => fmtShort(v) } }
+          }
         }
-      }
-    });
+      });
+    }
 
     // ── Top 10 open opps table ──
     const top10 = [...open].sort((a,b) => (parseFloat(b.estimatedvalue)||0) - (parseFloat(a.estimatedvalue)||0)).slice(0, 10);
