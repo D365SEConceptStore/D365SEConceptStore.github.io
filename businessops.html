@@ -678,7 +678,15 @@
     try { await msalInstance.loginRedirect(loginRequest); }
     catch(e) { alert("Login failed: " + e.message); }
   }
-  function signOut() { msalInstance.logoutRedirect(); }
+  function signOut() {
+    // If running inside the portal iframe, ask the parent to handle logout
+    // so the redirect happens at the top-level window, not inside the iframe
+    if (window.top !== window.self) {
+      window.top.postMessage({ type: "OPS_PORTAL_SIGNOUT" }, "*");
+    } else {
+      msalInstance.logoutRedirect();
+    }
+  }
 
   async function getToken() {
     const req = { ...loginRequest, account: currentAccount };

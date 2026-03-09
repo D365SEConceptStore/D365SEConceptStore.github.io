@@ -557,10 +557,16 @@ async function signIn() {
 }
 
 function signOut() {
-  // Clear theme pref and log out
   try { localStorage.removeItem("ops_portal_theme"); } catch(e) {}
   msalInstance.logoutRedirect();
 }
+
+// Listen for sign-out requests from child app iframes
+window.addEventListener("message", (event) => {
+  // Only accept messages from same origin
+  if (event.origin !== location.origin) return;
+  if (event.data?.type === "OPS_PORTAL_SIGNOUT") signOut();
+});
 
 // ── VIEWS ─────────────────────────────────────────────────────────
 function showHome() {

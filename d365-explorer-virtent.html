@@ -531,7 +531,11 @@
   }
 
   function signOut() {
-    msalInstance.logoutRedirect();
+    if (window.top !== window.self) {
+      window.top.postMessage({ type: "OPS_PORTAL_SIGNOUT" }, "*");
+    } else {
+      msalInstance.logoutRedirect();
+    }
   }
 
   async function getToken() {

@@ -564,7 +564,13 @@
     catch(e) { alert("Login failed: " + e.message); }
   }
 
-  function signOut() { msalInstance.logoutRedirect(); }
+  function signOut() {
+    if (window.top !== window.self) {
+      window.top.postMessage({ type: "OPS_PORTAL_SIGNOUT" }, "*");
+    } else {
+      msalInstance.logoutRedirect();
+    }
+  }
 
   async function getToken() {
     const req = { ...loginRequest, account: currentAccount };
