@@ -1,0 +1,811 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Ops Portal</title>
+<script src="https://alcdn.msauth.net/browser/2.35.0/js/msal-browser.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<style>
+/* ═══════════════════════════════════════════
+   DESIGN TOKENS  (theme-swapped at runtime)
+═══════════════════════════════════════════ */
+:root {
+  --bg:          #0d0f14;
+  --surface:     #13161e;
+  --card:        #181b24;
+  --card-alt:    #1e2230;
+  --card-hover:  #232840;
+  --border:      rgba(255,255,255,0.07);
+  --border-hi:   rgba(255,255,255,0.14);
+  --accent:      #4f8eff;
+  --accent-rgb:  79,142,255;
+  --text:        #e8eaf0;
+  --text-dim:    #8891a8;
+  --text-faint:  #4b5268;
+  --mono:        'DM Mono', monospace;
+  --sans:        'DM Sans', sans-serif;
+  --r:           12px;
+  --r-lg:        18px;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; overflow: hidden; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--sans);
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border-hi); border-radius: 99px; }
+
+/* ═══════════════════════════════════════════
+   HEADER
+═══════════════════════════════════════════ */
+header {
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  height: 54px; padding: 0 24px;
+  display: flex; align-items: center; justify-content: space-between;
+  flex-shrink: 0; z-index: 200; position: relative;
+}
+.logo {
+  display: flex; align-items: center; gap: 10px;
+  cursor: pointer; user-select: none; text-decoration: none;
+}
+.logo-mark {
+  width: 26px; height: 26px; border-radius: 7px; flex-shrink: 0;
+  background: linear-gradient(140deg, var(--accent), rgba(var(--accent-rgb),.4));
+  display: flex; align-items: center; justify-content: center;
+  font-size: 13px; transition: opacity .15s;
+}
+.logo:hover .logo-mark { opacity: .8; }
+.logo-wordmark {
+  font-family: var(--mono); font-size: 11px; font-weight: 500;
+  letter-spacing: .15em; color: var(--text-dim);
+}
+.logo-wordmark b { color: var(--text); font-weight: 600; }
+
+.nav-strip {
+  position: absolute; left: 50%; top: 50%;
+  transform: translate(-50%,-50%);
+  display: none; align-items: center; gap: 2px;
+}
+.nav-strip.visible { display: flex; }
+.nt {
+  display: flex; align-items: center; gap: 6px;
+  padding: 5px 12px; border-radius: 8px; border: none;
+  background: transparent; color: var(--text-dim);
+  font-family: var(--sans); font-size: 12px; font-weight: 500;
+  cursor: pointer; transition: background .15s, color .15s; white-space: nowrap;
+}
+.nt:hover { background: var(--card-alt); color: var(--text); }
+.nt.active { background: rgba(var(--accent-rgb),.12); color: var(--accent); }
+.nt-icon { font-size: 13px; }
+
+.h-right { display: flex; align-items: center; gap: 8px; }
+.status-pill {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 3px 10px; border-radius: 99px;
+  border: 1px solid var(--border);
+  font-family: var(--mono); font-size: 10px;
+  letter-spacing: .08em; color: var(--text-faint); transition: all .3s;
+}
+.status-pill .dot {
+  width: 5px; height: 5px; border-radius: 50%;
+  background: var(--text-faint); flex-shrink: 0; transition: all .3s;
+}
+.status-pill.live { color: #34d399; border-color: rgba(52,211,153,.25); }
+.status-pill.live .dot { background: #34d399; box-shadow: 0 0 6px #34d399; }
+.icon-btn {
+  width: 32px; height: 32px; border-radius: 8px;
+  border: 1px solid var(--border); background: transparent;
+  color: var(--text-dim); cursor: pointer; font-size: 14px;
+  display: flex; align-items: center; justify-content: center;
+  transition: all .15s; font-family: var(--sans);
+}
+.icon-btn:hover { border-color: var(--border-hi); color: var(--text); background: var(--card-alt); }
+
+/* ═══════════════════════════════════════════
+   MAIN
+═══════════════════════════════════════════ */
+.main { flex: 1; overflow: hidden; display: flex; flex-direction: column; }
+
+/* ── LOGIN ── */
+#v-login {
+  flex: 1; display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  padding: 40px 20px; animation: fadeUp .5s ease both;
+}
+.login-emblem {
+  width: 72px; height: 72px; border-radius: 20px;
+  background: linear-gradient(140deg, rgba(var(--accent-rgb),.18), rgba(var(--accent-rgb),.05));
+  border: 1px solid rgba(var(--accent-rgb),.3);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 30px; margin-bottom: 22px;
+}
+.login-h1 {
+  font-size: 26px; font-weight: 700; letter-spacing: -.02em;
+  margin-bottom: 10px; text-align: center;
+}
+.login-h1 em {
+  font-style: normal;
+  background: linear-gradient(120deg, var(--accent), #a78bfa);
+  -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+}
+.login-sub {
+  font-size: 13px; color: var(--text-dim); max-width: 360px;
+  text-align: center; line-height: 1.7; margin-bottom: 30px;
+}
+.app-preview { display: grid; grid-template-columns: repeat(4, 110px); gap: 8px; margin-bottom: 30px; }
+.ap-card {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: 10px; padding: 14px 10px; text-align: center; opacity: .55;
+}
+.ap-card .ap-icon { font-size: 20px; margin-bottom: 5px; }
+.ap-card .ap-name { font-size: 10px; color: var(--text-dim); font-weight: 600; letter-spacing: .04em; }
+.btn-signin {
+  display: flex; align-items: center; gap: 10px;
+  background: var(--accent); color: #fff; border: none;
+  padding: 11px 26px; border-radius: 10px;
+  font-family: var(--sans); font-size: 13px; font-weight: 600;
+  cursor: pointer; transition: all .2s;
+  box-shadow: 0 4px 20px rgba(var(--accent-rgb),.3);
+}
+.btn-signin:hover {
+  opacity: .9; transform: translateY(-1px);
+  box-shadow: 0 8px 28px rgba(var(--accent-rgb),.4);
+}
+
+/* ── HOME ── */
+#v-home {
+  display: none; flex: 1; overflow-y: auto;
+  padding: 28px 32px; animation: fadeUp .4s ease both;
+}
+.home-greeting { font-size: 20px; font-weight: 700; letter-spacing: -.02em; }
+.home-date { font-family: var(--mono); font-size: 11px; color: var(--text-faint); margin-bottom: 28px; margin-top: 3px; }
+.apps-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 12px;
+}
+.app-card {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: var(--r-lg); padding: 22px 20px 18px;
+  cursor: pointer; transition: all .2s; position: relative; overflow: hidden;
+}
+.app-card::after {
+  content: ''; position: absolute;
+  top: 0; left: 0; right: 0; height: 2px;
+  background: var(--c, var(--accent)); opacity: .9;
+  border-radius: 2px 2px 0 0;
+}
+.app-card:hover {
+  border-color: var(--border-hi); transform: translateY(-3px);
+  box-shadow: 0 16px 40px rgba(0,0,0,.35); background: var(--card-hover);
+}
+.ac-icon {
+  width: 42px; height: 42px; border-radius: 11px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 20px; margin-bottom: 14px;
+}
+.ac-name { font-size: 15px; font-weight: 700; margin-bottom: 5px; letter-spacing: -.01em; }
+.ac-desc { font-size: 12px; color: var(--text-dim); line-height: 1.6; margin-bottom: 14px; }
+.ac-footer { display: flex; align-items: center; justify-content: space-between; }
+.ac-meta { font-family: var(--mono); font-size: 10px; color: var(--text-faint); letter-spacing: .04em; }
+.ac-arrow { font-size: 16px; color: var(--text-faint); transition: all .2s; }
+.app-card:hover .ac-arrow { color: var(--accent); transform: translateX(4px); }
+
+/* ── APP SHELL ── */
+#v-app { display: none; flex: 1; flex-direction: column; overflow: hidden; }
+.app-breadcrumb {
+  background: var(--surface); border-bottom: 1px solid var(--border);
+  height: 36px; padding: 0 18px;
+  display: flex; align-items: center; gap: 8px; flex-shrink: 0;
+}
+.bc-back {
+  display: flex; align-items: center; gap: 5px;
+  font-size: 11px; color: var(--text-dim); cursor: pointer;
+  padding: 4px 8px; border-radius: 6px; border: none;
+  background: transparent; font-family: var(--sans); transition: all .15s;
+}
+.bc-back:hover { background: var(--card-alt); color: var(--text); }
+.bc-sep { font-size: 11px; color: var(--text-faint); }
+.bc-name { font-size: 11px; font-weight: 600; color: var(--text-dim); letter-spacing: .04em; font-family: var(--mono); }
+.bc-app  { font-size: 11px; font-weight: 600; color: var(--text); }
+
+.iframe-wrap { flex: 1; position: relative; overflow: hidden; }
+#app-iframe { width: 100%; height: 100%; border: none; background: var(--bg); }
+
+.iframe-loading {
+  position: absolute; inset: 0; background: var(--bg); z-index: 10;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 14px;
+}
+.iframe-loading.hidden { display: none; }
+.spin {
+  width: 26px; height: 26px; border-radius: 50%;
+  border: 2px solid var(--border); border-top-color: var(--accent);
+  animation: spin .7s linear infinite;
+}
+.iframe-loading span {
+  font-family: var(--mono); font-size: 11px;
+  color: var(--text-faint); letter-spacing: .1em;
+}
+
+/* ═══════════════════════════════════════════
+   SETTINGS PANEL
+═══════════════════════════════════════════ */
+.sp-overlay {
+  display: none; position: fixed; inset: 0;
+  background: rgba(0,0,0,.55); z-index: 500;
+  backdrop-filter: blur(4px);
+}
+.sp-panel {
+  position: fixed; top: 0; right: -420px; width: 420px; height: 100vh;
+  background: var(--surface); border-left: 1px solid var(--border);
+  box-shadow: -24px 0 80px rgba(0,0,0,.6);
+  z-index: 501; display: flex; flex-direction: column;
+  transition: right .3s cubic-bezier(.4,0,.2,1);
+}
+.sp-panel.open { right: 0; }
+.sp-head {
+  height: 54px; padding: 0 20px;
+  display: flex; align-items: center; justify-content: space-between;
+  border-bottom: 1px solid var(--border); flex-shrink: 0;
+}
+.sp-title { font-size: 14px; font-weight: 700; }
+.sp-body { flex: 1; overflow-y: auto; padding: 20px; }
+.sp-label {
+  font-size: 10px; font-weight: 600; letter-spacing: .14em;
+  text-transform: uppercase; color: var(--text-faint); margin-bottom: 12px;
+}
+.sp-sep { height: 1px; background: var(--border); margin: 20px 0; }
+
+.user-card {
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: 10px; padding: 13px 15px;
+  display: flex; align-items: center; gap: 11px; margin-bottom: 8px;
+}
+.user-ava {
+  width: 34px; height: 34px; border-radius: 50%;
+  background: linear-gradient(135deg, var(--accent), #a78bfa);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 13px; font-weight: 700; color: #fff; flex-shrink: 0;
+}
+.user-name-sp { font-size: 13px; font-weight: 600; }
+.user-email-sp { font-size: 11px; color: var(--text-dim); font-family: var(--mono); margin-top: 2px; }
+.btn-signout {
+  width: 100%; padding: 8px; border-radius: 8px;
+  border: 1px solid var(--border); background: transparent;
+  color: var(--text-dim); font-family: var(--sans);
+  font-size: 12px; font-weight: 500; cursor: pointer; transition: all .15s;
+}
+.btn-signout:hover { border-color: #ef4444; color: #ef4444; background: rgba(239,68,68,.06); }
+
+.swatch-grid { display: grid; grid-template-columns: repeat(5,1fr); gap: 7px; }
+.sw {
+  border-radius: 9px; overflow: hidden; cursor: pointer;
+  border: 2px solid transparent; aspect-ratio: 1; position: relative;
+  transition: transform .15s, box-shadow .15s, border-color .2s;
+}
+.sw:hover { transform: scale(1.08); box-shadow: 0 6px 18px rgba(0,0,0,.4); }
+.sw.active { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(var(--accent-rgb),.3); }
+.sw-top { width: 100%; height: 62%; display: flex; align-items: center; justify-content: center; }
+.sw-bot {
+  height: 38%; display: flex; align-items: center; justify-content: center;
+  font-size: 8px; font-weight: 700; font-family: var(--mono);
+  color: #fff; letter-spacing: .05em;
+}
+.sw-check {
+  display: none; position: absolute; top: 3px; right: 3px;
+  width: 14px; height: 14px; border-radius: 50%;
+  background: var(--accent); color: #fff;
+  font-size: 7px; align-items: center; justify-content: center;
+}
+.sw.active .sw-check { display: flex; }
+
+.sp-app-row {
+  display: flex; align-items: center; gap: 11px;
+  padding: 11px 13px; border-radius: 9px;
+  border: 1px solid var(--border); background: var(--card);
+  cursor: pointer; transition: all .15s; margin-bottom: 7px;
+}
+.sp-app-row:hover { border-color: var(--border-hi); background: var(--card-alt); }
+.sp-app-icon { font-size: 18px; flex-shrink: 0; }
+.sp-app-name { font-size: 12px; font-weight: 600; }
+.sp-app-meta { font-size: 10px; color: var(--text-faint); font-family: var(--mono); margin-top: 1px; }
+
+@keyframes spin    { to { transform: rotate(360deg); } }
+@keyframes fadeUp  { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; } }
+</style>
+</head>
+<body>
+
+<!-- ═══ HEADER ═══ -->
+<header>
+  <div class="logo" onclick="goHome()">
+    <div class="logo-mark">⚡</div>
+    <div class="logo-wordmark"><b>OPS</b> PORTAL</div>
+  </div>
+
+  <nav class="nav-strip" id="nav-strip">
+    <button class="nt active" data-key="home"        onclick="goHome()"><span class="nt-icon">⊞</span> Home</button>
+    <button class="nt"        data-key="opportunity" onclick="openApp('opportunity')"><span class="nt-icon">🎯</span> Opportunities</button>
+    <button class="nt"        data-key="sales"       onclick="openApp('sales')"><span class="nt-icon">📊</span> Sales</button>
+    <button class="nt"        data-key="explorer"    onclick="openApp('explorer')"><span class="nt-icon">🔍</span> Explorer</button>
+    <button class="nt"        data-key="po"          onclick="openApp('po')"><span class="nt-icon">📦</span> Purchase Orders</button>
+  </nav>
+
+  <div class="h-right">
+    <div class="status-pill" id="status-pill"><div class="dot"></div><span id="status-text">NOT SIGNED IN</span></div>
+    <button class="icon-btn" onclick="openSettings()" title="Settings">⚙</button>
+  </div>
+</header>
+
+<!-- ═══ MAIN ═══ -->
+<div class="main">
+
+  <!-- LOGIN -->
+  <div id="v-login">
+    <div class="login-emblem">⚡</div>
+    <h1 class="login-h1">Welcome to <em>Ops Portal</em></h1>
+    <p class="login-sub">Sign in once with your Microsoft account to access all tools. No data lake, no Power BI licence required.</p>
+    <div class="app-preview">
+      <div class="ap-card"><div class="ap-icon">🎯</div><div class="ap-name">PIPELINE</div></div>
+      <div class="ap-card"><div class="ap-icon">📊</div><div class="ap-name">SALES</div></div>
+      <div class="ap-card"><div class="ap-icon">🔍</div><div class="ap-name">EXPLORER</div></div>
+      <div class="ap-card"><div class="ap-icon">📦</div><div class="ap-name">ORDERS</div></div>
+    </div>
+    <button class="btn-signin" onclick="signIn()">
+      <svg width="16" height="16" viewBox="0 0 21 21" fill="none">
+        <path fill="#f25022" d="M0 0h10v10H0z"/>
+        <path fill="#00a4ef" d="M11 0h10v10H11z"/>
+        <path fill="#7fba00" d="M0 11h10v10H0z"/>
+        <path fill="#ffb900" d="M11 11h10v10H11z"/>
+      </svg>
+      Sign in with Microsoft
+    </button>
+  </div>
+
+  <!-- HOME -->
+  <div id="v-home">
+    <div class="home-greeting" id="home-greeting">Good morning</div>
+    <div class="home-date" id="home-date"></div>
+    <div class="apps-grid">
+
+      <div class="app-card" style="--c:#4f8eff" onclick="openApp('opportunity')">
+        <div class="ac-icon" style="background:rgba(79,142,255,.1);border:1px solid rgba(79,142,255,.2)">🎯</div>
+        <div class="ac-name">Opportunity Pipeline</div>
+        <div class="ac-desc">Live CRM pipeline — stage funnel, weighted value, close dates and top opportunities by estimated revenue.</div>
+        <div class="ac-footer">
+          <span class="ac-meta">opportunities · D365 CRM</span>
+          <span class="ac-arrow">→</span>
+        </div>
+      </div>
+
+      <div class="app-card" style="--c:#34d399" onclick="openApp('sales')">
+        <div class="ac-icon" style="background:rgba(52,211,153,.1);border:1px solid rgba(52,211,153,.2)">📊</div>
+        <div class="ac-name">Sales Dashboard</div>
+        <div class="ac-desc">Retail transaction overview — net sales, quantity, store breakdown, returns and daily trend.</div>
+        <div class="ac-footer">
+          <span class="ac-meta">retail transactions · D365 F&amp;O</span>
+          <span class="ac-arrow">→</span>
+        </div>
+      </div>
+
+      <div class="app-card" style="--c:#a78bfa" onclick="openApp('explorer')">
+        <div class="ac-icon" style="background:rgba(167,139,250,.1);border:1px solid rgba(167,139,250,.2)">🔍</div>
+        <div class="ac-name">D365 Explorer</div>
+        <div class="ac-desc">Browse and query any D365 entity — inspect fields, filter records and explore your data model.</div>
+        <div class="ac-footer">
+          <span class="ac-meta">all entities · D365 OData</span>
+          <span class="ac-arrow">→</span>
+        </div>
+      </div>
+
+      <div class="app-card" style="--c:#fbbf24" onclick="openApp('po')">
+        <div class="ac-icon" style="background:rgba(251,191,36,.1);border:1px solid rgba(251,191,36,.2)">📦</div>
+        <div class="ac-name">Purchase Orders</div>
+        <div class="ac-desc">Browse POs by status and vendor with full line-item drill-down and delivery tracking.</div>
+        <div class="ac-footer">
+          <span class="ac-meta">purchase orders · D365 F&amp;O</span>
+          <span class="ac-arrow">→</span>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- APP SHELL -->
+  <div id="v-app">
+    <div class="app-breadcrumb">
+      <button class="bc-back" onclick="goHome()">← Back</button>
+      <span class="bc-sep">/</span>
+      <span class="bc-name">OPS PORTAL</span>
+      <span class="bc-sep">/</span>
+      <span class="bc-app" id="bc-app-name"></span>
+    </div>
+    <div class="iframe-wrap">
+      <div class="iframe-loading" id="iframe-loading">
+        <div class="spin"></div>
+        <span id="loading-text">LOADING…</span>
+      </div>
+      <iframe id="app-iframe" title="Application"></iframe>
+    </div>
+  </div>
+
+</div>
+
+<!-- ═══ SETTINGS ═══ -->
+<div class="sp-overlay" id="sp-overlay" onclick="closeSettings()"></div>
+<div class="sp-panel" id="sp-panel">
+  <div class="sp-head">
+    <span class="sp-title">⚙ Settings</span>
+    <button class="icon-btn" onclick="closeSettings()">✕</button>
+  </div>
+  <div class="sp-body">
+
+    <div class="sp-label">Account</div>
+    <div class="user-card" id="user-card" style="display:none">
+      <div class="user-ava" id="user-ava">?</div>
+      <div>
+        <div class="user-name-sp" id="user-name-sp">—</div>
+        <div class="user-email-sp" id="user-email-sp">—</div>
+      </div>
+    </div>
+    <button class="btn-signout" id="btn-signout" style="display:none" onclick="signOut()">Sign out</button>
+
+    <div class="sp-sep"></div>
+
+    <div class="sp-label">🌑 Dark themes</div>
+    <div class="swatch-grid" id="sw-dark"></div>
+
+    <div class="sp-sep"></div>
+
+    <div class="sp-label">☀️ Light themes</div>
+    <div class="swatch-grid" id="sw-light"></div>
+
+    <div class="sp-sep"></div>
+
+    <div class="sp-label">Applications</div>
+    <div id="sp-apps"></div>
+
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════════
+//  CONFIG — shared across all apps (same tenant + client ID)
+// ═══════════════════════════════════════════════════════════════════
+const TENANT_ID = "3216ff05-4e76-4673-9760-8546567f2fca";
+const CLIENT_ID = "c54efe5e-4094-43db-830c-eaf127a06510";
+const D365_URL  = "https://operations-sales-demo.crm4.dynamics.com";
+
+// File paths — must be in the same folder as this portal.html
+const APPS = {
+  opportunity: { name:"Opportunity Pipeline", src:"businessops.html",            icon:"🎯", meta:"opportunities · D365 CRM"          },
+  sales:       { name:"Sales Dashboard",      src:"d365-dashboard.html",         icon:"📊", meta:"retail transactions · D365 F&O"    },
+  explorer:    { name:"D365 Explorer",        src:"d365-explorer-virtent.html",  icon:"🔍", meta:"all entities · D365 OData"          },
+  po:          { name:"Purchase Orders",      src:"po-portal.html",              icon:"📦", meta:"purchase orders · D365 F&O"         },
+};
+// ═══════════════════════════════════════════════════════════════════
+
+// ── SECURITY NOTES ──────────────────────────────────────────────
+// 1. cacheLocation = "sessionStorage" → tokens are never written to disk.
+//    The session dies when the browser tab closes.
+// 2. All child apps are on the same origin (same folder / same host).
+//    They each initialise their own msalInstance with the same config,
+//    so they find the existing session in sessionStorage automatically.
+//    No token is passed via URL, postMessage or any other channel.
+// 3. Theme injection uses iframe.contentDocument — only works same-origin.
+//    Cross-origin iframes would silently skip styling (try/catch below).
+// 4. storeAuthStateInCookie: false → no cookies written for auth state.
+// ────────────────────────────────────────────────────────────────
+
+const msalInstance = new msal.PublicClientApplication({
+  auth: {
+    clientId: CLIENT_ID,
+    authority: `https://login.microsoftonline.com/${TENANT_ID}`,
+    redirectUri: location.href.split("?")[0].split("#")[0],
+  },
+  cache: { cacheLocation: "sessionStorage", storeAuthStateInCookie: false }
+});
+
+const loginRequest = { scopes: [`${D365_URL}/.default`] };
+let currentAccount = null;
+let msalReady = false;
+let activeApp = null;
+
+msalInstance.initialize().then(() => {
+  msalReady = true;
+  return msalInstance.handleRedirectPromise();
+}).then(res => {
+  if (res) setAccount(res.account);
+  else {
+    const accs = msalInstance.getAllAccounts();
+    if (accs.length) setAccount(accs[0]);
+  }
+}).catch(console.error);
+
+// ── AUTH ──────────────────────────────────────────────────────────
+function setAccount(account) {
+  currentAccount = account;
+  const pill = document.getElementById("status-pill");
+  pill.classList.add("live");
+  document.getElementById("status-text").textContent =
+    (account.name || account.username).split(" ")[0].toUpperCase();
+  document.getElementById("nav-strip").classList.add("visible");
+  document.getElementById("user-card").style.display  = "flex";
+  document.getElementById("btn-signout").style.display = "block";
+  document.getElementById("user-name-sp").textContent  = account.name || account.username;
+  document.getElementById("user-email-sp").textContent = account.username;
+  document.getElementById("user-ava").textContent =
+    (account.name || account.username)[0].toUpperCase();
+  showHome();
+}
+
+async function signIn() {
+  if (!msalReady) { alert("Still initializing, please try again."); return; }
+  try { await msalInstance.loginRedirect(loginRequest); }
+  catch(e) { console.error(e); alert("Login failed: " + e.message); }
+}
+
+function signOut() {
+  // Clear theme pref and log out
+  try { localStorage.removeItem("ops_portal_theme"); } catch(e) {}
+  msalInstance.logoutRedirect();
+}
+
+// ── VIEWS ─────────────────────────────────────────────────────────
+function showHome() {
+  document.getElementById("v-login").style.display = "none";
+  document.getElementById("v-home").style.display  = "block";
+  document.getElementById("v-app").style.display   = "none";
+  // Stop any background fetches in child app
+  const fr = document.getElementById("app-iframe");
+  fr.src = "about:blank";
+  activeApp = null;
+  setNav("home");
+  const h = new Date().getHours();
+  const name = currentAccount?.name?.split(" ")[0]
+            || currentAccount?.username?.split("@")[0] || "";
+  document.getElementById("home-greeting").textContent =
+    (h < 12 ? "Good morning" : h < 17 ? "Good afternoon" : "Good evening")
+    + (name ? `, ${name}` : "");
+  document.getElementById("home-date").textContent =
+    new Date().toLocaleDateString("en-GB", { weekday:"long", day:"numeric", month:"long", year:"numeric" });
+}
+
+function openApp(key) {
+  if (!currentAccount) { signIn(); return; }
+  const app = APPS[key];
+  if (!app) return;
+  activeApp = key;
+
+  document.getElementById("v-login").style.display = "none";
+  document.getElementById("v-home").style.display  = "none";
+  const shell = document.getElementById("v-app");
+  shell.style.display = "flex";
+  shell.style.flexDirection = "column";
+
+  document.getElementById("bc-app-name").textContent = app.name;
+  document.getElementById("loading-text").textContent = `LOADING ${app.name.toUpperCase()}…`;
+  document.getElementById("iframe-loading").classList.remove("hidden");
+  setNav(key);
+
+  const iframe = document.getElementById("app-iframe");
+  iframe.onload = () => {
+    document.getElementById("iframe-loading").classList.add("hidden");
+    // Re-apply current theme into newly loaded app
+    const t = THEMES.find(x => x.id === activeTheme);
+    if (t) injectTheme(t);
+  };
+  iframe.src = app.src;
+}
+
+function goHome() {
+  if (!currentAccount) return;
+  closeSettings();
+  showHome();
+}
+
+function setNav(key) {
+  document.querySelectorAll(".nt").forEach(el =>
+    el.classList.toggle("active", el.dataset.key === key)
+  );
+}
+
+// ── SETTINGS ──────────────────────────────────────────────────────
+function openSettings() {
+  document.getElementById("sp-overlay").style.display = "block";
+  document.getElementById("sp-panel").classList.add("open");
+}
+function closeSettings() {
+  document.getElementById("sp-panel").classList.remove("open");
+  document.getElementById("sp-overlay").style.display = "none";
+}
+
+// ── THEME SYSTEM ──────────────────────────────────────────────────
+const THEMES = [
+  // DARK
+  { id:"dark-midnight", dark:true,  label:"Midnight",
+    bg:"#0d0f14", surface:"#13161e", card:"#181b24", cardAlt:"#1e2230", cardHover:"#232840",
+    border:"rgba(255,255,255,0.07)", borderHi:"rgba(255,255,255,0.14)",
+    text:"#e8eaf0", textDim:"#8891a8", textFaint:"#4b5268", accent:"#4f8eff" },
+  { id:"dark-obsidian", dark:true,  label:"Obsidian",
+    bg:"#0f0f0f", surface:"#171717", card:"#1c1c1c", cardAlt:"#242424", cardHover:"#2e2e2e",
+    border:"rgba(255,255,255,0.06)", borderHi:"rgba(255,255,255,0.12)",
+    text:"#f0f0f0", textDim:"#888888", textFaint:"#444444", accent:"#e879f9" },
+  { id:"dark-forest",   dark:true,  label:"Forest",
+    bg:"#0a0f0d", surface:"#0f1610", card:"#131c14", cardAlt:"#192418", cardHover:"#1f2c1e",
+    border:"rgba(255,255,255,0.07)", borderHi:"rgba(255,255,255,0.13)",
+    text:"#dff0e4", textDim:"#7a9e85", textFaint:"#3d5c44", accent:"#34d399" },
+  { id:"dark-ember",    dark:true,  label:"Ember",
+    bg:"#100c09", surface:"#18120e", card:"#1e1710", cardAlt:"#261e16", cardHover:"#2e2419",
+    border:"rgba(255,255,255,0.07)", borderHi:"rgba(255,255,255,0.13)",
+    text:"#f0e8df", textDim:"#9e8878", textFaint:"#5c4a3d", accent:"#fb923c" },
+  { id:"dark-aurora",   dark:true,  label:"Aurora",
+    bg:"#08090f", surface:"#0d0f1a", card:"#121420", cardAlt:"#181b2a", cardHover:"#1e2234",
+    border:"rgba(255,255,255,0.07)", borderHi:"rgba(255,255,255,0.13)",
+    text:"#e4e8f8", textDim:"#7880a8", textFaint:"#3a4060", accent:"#a78bfa" },
+  // LIGHT
+  { id:"light-cloud",   dark:false, label:"Cloud",
+    bg:"#f4f6f9", surface:"#ffffff", card:"#ffffff", cardAlt:"#f0f2f5", cardHover:"#e8ecf2",
+    border:"rgba(0,0,0,0.08)", borderHi:"rgba(0,0,0,0.16)",
+    text:"#111827", textDim:"#6b7280", textFaint:"#9ca3af", accent:"#2563eb" },
+  { id:"light-rose",    dark:false, label:"Rose",
+    bg:"#fdf4f6", surface:"#ffffff", card:"#ffffff", cardAlt:"#fce8ee", cardHover:"#fad5de",
+    border:"rgba(0,0,0,0.08)", borderHi:"rgba(0,0,0,0.15)",
+    text:"#1f0a10", textDim:"#8b4c5e", textFaint:"#c9879a", accent:"#e11d48" },
+  { id:"light-sage",    dark:false, label:"Sage",
+    bg:"#f2f7f4", surface:"#ffffff", card:"#ffffff", cardAlt:"#e8f2ec", cardHover:"#d8eee0",
+    border:"rgba(0,0,0,0.08)", borderHi:"rgba(0,0,0,0.15)",
+    text:"#0d1f15", textDim:"#4d7a5e", textFaint:"#8fb09d", accent:"#059669" },
+  { id:"light-sand",    dark:false, label:"Sand",
+    bg:"#faf8f4", surface:"#ffffff", card:"#ffffff", cardAlt:"#f5f0e8", cardHover:"#ede5d4",
+    border:"rgba(0,0,0,0.08)", borderHi:"rgba(0,0,0,0.15)",
+    text:"#1c1710", textDim:"#7a6e5e", textFaint:"#b0a898", accent:"#d97706" },
+  { id:"light-slate",   dark:false, label:"Slate",
+    bg:"#f1f3f6", surface:"#ffffff", card:"#ffffff", cardAlt:"#e8ecf1", cardHover:"#dde3eb",
+    border:"rgba(0,0,0,0.08)", borderHi:"rgba(0,0,0,0.15)",
+    text:"#0f172a", textDim:"#64748b", textFaint:"#94a3b8", accent:"#7c3aed" },
+];
+
+let activeTheme = "dark-midnight";
+
+function hexToRgb(hex) {
+  const r = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+  return r ? `${parseInt(r[1],16)},${parseInt(r[2],16)},${parseInt(r[3],16)}` : "79,142,255";
+}
+
+function applyTheme(id) {
+  const t = THEMES.find(x => x.id === id);
+  if (!t) return;
+  activeTheme = id;
+  const s = document.documentElement.style;
+  s.setProperty("--bg",         t.bg);
+  s.setProperty("--surface",    t.surface);
+  s.setProperty("--card",       t.card);
+  s.setProperty("--card-alt",   t.cardAlt);
+  s.setProperty("--card-hover", t.cardHover);
+  s.setProperty("--border",     t.border);
+  s.setProperty("--border-hi",  t.borderHi);
+  s.setProperty("--text",       t.text);
+  s.setProperty("--text-dim",   t.textDim);
+  s.setProperty("--text-faint", t.textFaint);
+  s.setProperty("--accent",     t.accent);
+  s.setProperty("--accent-rgb", hexToRgb(t.accent));
+  document.querySelectorAll(".sw").forEach(el =>
+    el.classList.toggle("active", el.dataset.id === id)
+  );
+  injectTheme(t);
+  try { localStorage.setItem("ops_portal_theme", id); } catch(e) {}
+}
+
+// ── THEME INJECTION INTO IFRAME ──────────────────────────────────
+// Each child app uses different CSS variable names (--muted, --muted vs
+// --text-dim, --card-alt, etc). We inject a :root override that covers
+// the union of all variable names across all 4 apps, mapping them all
+// to the portal's current theme tokens. Same-origin only — silently
+// skips if the iframe has not yet loaded or is cross-origin.
+function injectTheme(t) {
+  try {
+    const iframe = document.getElementById("app-iframe");
+    if (!iframe?.contentDocument?.head) return;
+    const rgb = hexToRgb(t.accent);
+    const arrowColor = encodeURIComponent(t.textDim);
+    const css = `
+      :root {
+        /* ── shared vars ── */
+        --bg: ${t.bg} !important;
+        --surface: ${t.surface} !important;
+        --card: ${t.card} !important;
+        --card-alt: ${t.cardAlt} !important;
+        --border: ${t.border} !important;
+        --border-hi: ${t.borderHi} !important;
+        --text: ${t.text} !important;
+        --text-dim: ${t.textDim} !important;
+        --text-faint: ${t.textFaint} !important;
+        --accent: ${t.accent} !important;
+        /* ── alias vars used by individual apps ── */
+        --muted: ${t.textDim} !important;
+        --accent2: ${t.accent} !important;
+        --accent3: ${t.accent} !important;
+        --accent4: ${t.accent} !important;
+        --accent5: ${t.accent} !important;
+        --accent-rgb: ${rgb} !important;
+        --accent-light: rgba(${rgb},0.10) !important;
+        --accent-dim:   rgba(${rgb},0.08) !important;
+        --accent-mid:   rgba(${rgb},0.18) !important;
+        /* ── select chevron ── */
+        --select-arrow: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='${arrowColor}'/%3E%3C/svg%3E") !important;
+      }`;
+    let tag = iframe.contentDocument.getElementById("__portal_theme__");
+    if (!tag) {
+      tag = iframe.contentDocument.createElement("style");
+      tag.id = "__portal_theme__";
+      iframe.contentDocument.head.appendChild(tag);
+    }
+    tag.textContent = css;
+  } catch(e) { /* cross-origin or not-yet-loaded — skip silently */ }
+}
+
+// ── SWATCHES ──────────────────────────────────────────────────────
+function buildSwatches() {
+  ["dark","light"].forEach(group => {
+    const el = document.getElementById(`sw-${group}`);
+    THEMES.filter(t => (group === "dark") === t.dark).forEach(t => {
+      const div = document.createElement("div");
+      div.className = "sw" + (t.id === activeTheme ? " active" : "");
+      div.dataset.id = t.id;
+      div.title = t.label;
+      div.innerHTML = `
+        <div class="sw-top" style="background:${t.bg}">
+          <div style="width:60%;height:44%;background:${t.surface};border-radius:3px;
+               border:1px solid ${t.border};display:flex;gap:2px;padding:3px">
+            <div style="flex:1;background:${t.cardAlt};border-radius:2px"></div>
+            <div style="flex:2;background:${t.card};border-radius:2px"></div>
+          </div>
+        </div>
+        <div class="sw-bot" style="background:${t.accent}">${t.label}</div>
+        <div class="sw-check">✓</div>`;
+      div.addEventListener("click", () => applyTheme(t.id));
+      el.appendChild(div);
+    });
+  });
+}
+
+// ── SETTINGS APP LIST ─────────────────────────────────────────────
+function buildSettingsApps() {
+  const el = document.getElementById("sp-apps");
+  Object.entries(APPS).forEach(([key, app]) => {
+    const row = document.createElement("div");
+    row.className = "sp-app-row";
+    row.innerHTML = `
+      <span class="sp-app-icon">${app.icon}</span>
+      <div>
+        <div class="sp-app-name">${app.name}</div>
+        <div class="sp-app-meta">${app.meta}</div>
+      </div>`;
+    row.addEventListener("click", () => { closeSettings(); openApp(key); });
+    el.appendChild(row);
+  });
+}
+
+// ── INIT ──────────────────────────────────────────────────────────
+(function init() {
+  let saved = "dark-midnight";
+  try { saved = localStorage.getItem("ops_portal_theme") || saved; } catch(e) {}
+  buildSwatches();
+  buildSettingsApps();
+  applyTheme(saved);
+})();
+</script>
+</body>
+</html>
