@@ -540,7 +540,6 @@
       const fields = [
         "mserp_purchaseordernumber",
         "mserp_ordervendoraccountnumber",
-        "mserp_vendororganizationname",
         "mserp_purchaseorderstatus",
         "mserp_documentapprovalstatus",
         "mserp_accountingdate",
@@ -608,6 +607,54 @@
         rawData = rawData.concat(json.value || []);
         url = json["@odata.nextLink"] || null;
       }
+
+      // ── Fetch vendor names from mserp_vendvendorv2entities ──
+      // The PO header entity doesn't carry the vendor org name,
+      // so we fetch it separately and join by account number.
+      updateLoadingMsg(`Loading vendor names…`);
+      try {
+        const vendorToken = await getToken();
+        const uniqueAccounts = [...new Set(rawData.map(r => r.mserp_ordervendoraccountnumber).filter(Boolean))];
+
+        // Fetch all vendors in batches of 50 using $filter IN clause
+        const vendorMap = {};
+        const BATCH = 50;
+        for (let i = 0; i < uniqueAccounts.length; i += BATCH) {
+          const batch = uniqueAccounts.slice(i, i + BATCH);
+          const filterStr = batch.map(a => `mserp_vendoraccountnumber eq '${a.replace(/'/g,"''")}'`).join(" or ");
+          const vendorUrl = `${D365_URL}/api/data/v9.2/mserp_vendvendorv2entities?$select=mserp_vendoraccountnumber,mserp_vendororganizationname,mserp_dataareaid&$filter=${encodeURIComponent(filterStr)}`;
+          const vRes = await fetch(vendorUrl, {
+            headers: {
+              "Authorization": `Bearer ${vendorToken}`,
+              "Accept": "application/json",
+              "OData-MaxVersion": "4.0",
+              "OData-Version": "4.0",
+            }
+          });
+          if (vRes.ok) {
+            const vJson = await vRes.json();
+            (vJson.value || []).forEach(v => {
+              const key = `${v.mserp_vendoraccountnumber}__${v.mserp_dataareaid}`;
+              vendorMap[key] = v.mserp_vendororganizationname || v.mserp_vendoraccountnumber;
+              if (!vendorMap[v.mserp_vendoraccountnumber]) {
+                vendorMap[v.mserp_vendoraccountnumber] = v.mserp_vendororganizationname || v.mserp_vendoraccountnumber;
+              }
+            });
+          }
+        }
+
+        // Join vendor names onto rawData
+        rawData.forEach(r => {
+          const key = `${r.mserp_ordervendoraccountnumber}__${r.mserp_dataareaid}`;
+          r.mserp_vendororganizationname =
+            vendorMap[key] ||
+            vendorMap[r.mserp_ordervendoraccountnumber] ||
+            null;
+        });
+      } catch(e) {
+        console.warn("Vendor name lookup failed, showing account codes only:", e.message);
+      }
+      // ────────────────────────────────────────────────────────────
 
       populateFilters();
       applyFilters();
