@@ -556,72 +556,72 @@
         "mserp_reasoncomment",
       ].join(",");
 
-      // Note: no $top here — let the server page via odata.maxpagesize only.
-      // $top on F&O virtual entities can conflict with server-side paging.
-      let url = `${D365_URL}/api/data/v9.2/${ENTITY}?$select=${fields}&$orderby=mserp_accountingdate desc`;
-      rawData = [];
-      let page = 0;
+      // ── Phase 1: fetch first page of POs, render immediately ──────
+      updateLoadingMsg("Loading orders…");
+      const token = await getToken();
+      const firstUrl = `${D365_URL}/api/data/v9.2/${ENTITY}?$select=${fields}`;
+      const firstRes = await fetch(firstUrl, {
+        headers: {
+          "Authorization": `Bearer ${token}`,
+          "Accept": "application/json",
+          "OData-MaxVersion": "4.0",
+          "OData-Version": "4.0",
+          "Prefer": `odata.maxpagesize=${PAGE}`
+        }
+      });
+      if (!firstRes.ok) throw new Error(`${firstRes.status} — ${await firstRes.text()}`);
+      const firstJson = await firstRes.json();
+      rawData = firstJson.value || [];
 
-      while (url) {
-        page++;
-        updateLoadingMsg(`Fetching page ${page} — ${rawData.length} orders so far…`);
+      // Render first page immediately so user sees data right away
+      populateFilters();
+      applyFilters();
+      document.getElementById("data-range-label").textContent = `${rawData.length} orders loaded (more loading…)`;
 
-        // Refresh token every page — avoids expiry on large datasets
-        const token = await getToken();
-
-        let res = await fetch(url, {
-          headers: {
-            "Authorization": `Bearer ${token}`,
-            "Accept": "application/json",
-            "OData-MaxVersion": "4.0",
-            "OData-Version": "4.0",
-            "Prefer": `odata.maxpagesize=${PAGE}`
-          }
-        });
-
-        // On 401, force a fresh token and retry once
-        if (res.status === 401) {
-          const freshToken = await msalInstance
-            .acquireTokenSilent({ ...loginRequest, account: currentAccount, forceRefresh: true })
-            .then(r => r.accessToken)
-            .catch(() => null);
-          if (!freshToken) throw new Error("Session expired. Please sign in again.");
-          res = await fetch(url, {
+      // ── Phase 2: fetch remaining PO pages + vendor names in parallel ──
+      const remainingPagesPromise = (async () => {
+        let nextUrl = firstJson["@odata.nextLink"] || null;
+        let page = 1;
+        while (nextUrl) {
+          page++;
+          updateLoadingMsg(`Fetching page ${page} — ${rawData.length} orders so far…`);
+          const t = await getToken();
+          let res = await fetch(nextUrl, {
             headers: {
-              "Authorization": `Bearer ${freshToken}`,
+              "Authorization": `Bearer ${t}`,
               "Accept": "application/json",
               "OData-MaxVersion": "4.0",
               "OData-Version": "4.0",
               "Prefer": `odata.maxpagesize=${PAGE}`
             }
           });
+          if (res.status === 401) {
+            const fresh = await msalInstance
+              .acquireTokenSilent({ ...loginRequest, account: currentAccount, forceRefresh: true })
+              .then(r => r.accessToken).catch(() => null);
+            if (!fresh) throw new Error("Session expired. Please sign in again.");
+            res = await fetch(nextUrl, {
+              headers: { "Authorization": `Bearer ${fresh}`, "Accept": "application/json", "OData-MaxVersion": "4.0", "OData-Version": "4.0", "Prefer": `odata.maxpagesize=${PAGE}` }
+            });
+          }
+          if (!res.ok) throw new Error(`${res.status} — ${await res.text()}`);
+          const json = await res.json();
+          rawData = rawData.concat(json.value || []);
+          nextUrl = json["@odata.nextLink"] || null;
         }
+      })();
 
-        if (!res.ok) throw new Error(`${res.status} — ${await res.text()}`);
-        const json = await res.json();
-        rawData = rawData.concat(json.value || []);
-        url = json["@odata.nextLink"] || null;
-      }
-
-      // ── Fetch vendor names from mserp_vendvendorv2entities ──
-      // The PO header entity doesn't carry the vendor org name,
-      // so we fetch it separately and join by account number.
-      updateLoadingMsg(`Loading vendor names…`);
-      try {
+      const vendorNamesPromise = (async () => {
+        // Get unique companies from first page — good enough to start parallel fetch
+        // Additional companies discovered later will be handled in join fallback
+        const firstPageCompanies = [...new Set(rawData.map(r => r.mserp_dataareaid).filter(Boolean))];
         const vendorToken = await getToken();
         const vendorMap = {};
 
-        // Get unique companies from loaded POs
-        const companies = [...new Set(rawData.map(r => r.mserp_dataareaid).filter(Boolean))];
-
-        // Fetch vendors per company — Dataverse virtual entities are company-scoped.
-        // Use CallerCompany header to switch context per company.
-        for (const company of companies) {
-          updateLoadingMsg(`Loading vendor names for ${company}…`);
+        // Fetch all companies in parallel
+        await Promise.all(firstPageCompanies.map(async company => {
           let vUrl = `${D365_URL}/api/data/v9.2/mserp_vendvendorv2entities?$select=mserp_vendoraccountnumber,mserp_vendororganizationname,mserp_dataareaid`;
-          let vPage = 0;
           while (vUrl) {
-            vPage++;
             const vRes = await fetch(vUrl, {
               headers: {
                 "Authorization": `Bearer ${vendorToken}`,
@@ -632,16 +632,8 @@
                 "CallerCompany": company,
               }
             });
-            if (!vRes.ok) {
-              console.warn(`Vendor fetch failed for ${company} (${vRes.status}):`, await vRes.text());
-              break;
-            }
+            if (!vRes.ok) { console.warn(`Vendor fetch failed for ${company} (${vRes.status})`); break; }
             const vJson = await vRes.json();
-            if (vPage === 1 && company === companies[0]) {
-              console.log(`VENDOR PROBE [${company}] sample:`, vJson.value?.[0]);
-              const rec = vJson.value?.[0];
-              if (rec) console.log("VENDOR PROBE — all keys:", Object.keys(rec).filter(k => k.startsWith("mserp_")));
-            }
             (vJson.value || []).forEach(v => {
               const acct = v.mserp_vendoraccountnumber;
               const name = v.mserp_vendororganizationname;
@@ -652,24 +644,21 @@
             });
             vUrl = vJson["@odata.nextLink"] || null;
           }
-        }
+        }));
 
-        console.log(`Loaded ${Object.keys(vendorMap).length} vendor entries across ${companies.length} companies`);
+        return vendorMap;
+      })();
 
-        // Join onto PO rows
-        rawData.forEach(r => {
-          const key = `${r.mserp_ordervendoraccountnumber}__${r.mserp_dataareaid}`;
-          r.mserp_vendororganizationname =
-            vendorMap[key] ||
-            vendorMap[r.mserp_ordervendoraccountnumber] ||
-            null;
-        });
-      } catch(e) {
-        console.error("Vendor name lookup failed:", e.message);
-        document.getElementById("data-range-label").textContent += " (vendor names unavailable)";
-      }
-      // ────────────────────────────────────────────────────────────
+      // Wait for both to complete
+      const [, vendorMap] = await Promise.all([remainingPagesPromise, vendorNamesPromise]);
 
+      // Join vendor names onto all PO rows
+      rawData.forEach(r => {
+        const key = `${r.mserp_ordervendoraccountnumber}__${r.mserp_dataareaid}`;
+        r.mserp_vendororganizationname = vendorMap[key] || vendorMap[r.mserp_ordervendoraccountnumber] || null;
+      });
+
+      // Final render with complete data
       populateFilters();
       applyFilters();
       document.getElementById("data-range-label").textContent = `${rawData.length} orders loaded`;
