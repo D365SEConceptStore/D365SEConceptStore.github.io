@@ -785,18 +785,7 @@
     document.getElementById("kpi-overdue").textContent  = overdue.length.toLocaleString();
     document.getElementById("kpi-overdue-sub").textContent = overdue.length > 0 ? "past delivery date" : "none overdue ✓";
 
-    // Value — group by currency
-    const byCurrency = {};
-    filtered.forEach(r => {
-      const c = r.mserp_currencycode || "—";
-      if (!byCurrency[c]) byCurrency[c] = 0;
-      byCurrency[c]++;
-    });
-    const topCurrency = Object.entries(byCurrency).sort((a,b) => b[1]-a[1])[0];
-    document.getElementById("kpi-value").textContent    = filtered.length.toLocaleString();
-    document.getElementById("kpi-value-sub").textContent= topCurrency ? `mostly ${topCurrency[0]}` : "";
-    // Fix label to show order count nicely
-    document.getElementById("kpi-value").textContent = filtered.length;
+    document.getElementById("kpi-value").textContent = currencies.length;
     document.getElementById("kpi-value-sub").textContent = currencies.join(", ") || "—";
     document.querySelector(".kpi-card.c2 .kpi-label").textContent = "Currencies in Use";
     document.querySelector(".kpi-card.c2 .kpi-icon").textContent = "💱";
