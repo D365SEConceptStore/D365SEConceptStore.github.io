@@ -115,7 +115,7 @@
       border-radius: 20px; display: flex; align-items: center; justify-content: center; font-size: 32px;
     }
     .login-title { font-size: 30px; font-weight: 700; text-align: center; }
-    .login-title span { background: linear-gradient(135deg, var(--accent), var(--accent2)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    .login-title span { background: linear-gradient(135deg, var(--accent), var(--accent2)); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
     .login-sub { font-size: 14px; color: var(--text-dim); text-align: center; max-width: 360px; line-height: 1.7; }
 
     /* ── DASHBOARD ── */
@@ -131,17 +131,17 @@
     .page-sub { font-size: 11px; color: var(--text-faint); font-family: var(--mono); margin-top: 3px; }
 
     select {
-      background: var(--card); border: 1px solid var(--border);
+      background-color: var(--card); border: 1px solid var(--border);
       color: var(--text); font-family: var(--sans); font-size: 12px;
       padding: 8px 12px; border-radius: 8px; outline: none; cursor: pointer;
-      transition: border-color 0.2s; appearance: none;
-      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%238891a8'/%3E%3C/svg%3E");
+      transition: border-color 0.2s, background-color 0.2s, color 0.2s; appearance: none;
+      background-image: var(--select-arrow, url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%238891a8'/%3E%3C/svg%3E"));
       background-repeat: no-repeat; background-position: right 10px center;
       padding-right: 28px;
     }
     select:focus { border-color: var(--accent); }
-    select option { background: #1e2230; color: var(--text); }
-    label.ctrl-label { font-size: 11px; color: var(--text-faint); font-weight: 500; }
+    select option { background-color: var(--card-alt); color: var(--text); }
+    label.ctrl-label { font-size: 11px; color: var(--text-faint); font-weight: 500; transition: color 0.2s; }
 
     /* ── KPI GRID ── */
     .kpi-grid {
@@ -1283,6 +1283,13 @@
     r.setProperty("--text-dim",   t.textDim);
     r.setProperty("--text-faint", t.textFaint);
     r.setProperty("--accent",     t.accent);
+
+    // Update dropdown chevron to match textDim color
+    const arrowColor = encodeURIComponent(t.textDim);
+    r.setProperty("--select-arrow",
+      `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='${arrowColor}'/%3E%3C/svg%3E")`
+    );
+
     // Update chart tooltip colours if charts exist
     Object.values(charts).forEach(c => {
       if (!c.options?.plugins?.tooltip) return;
