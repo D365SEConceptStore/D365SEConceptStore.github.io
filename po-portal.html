@@ -453,7 +453,8 @@
     auth: {
       clientId: CLIENT_ID,
       authority: `https://login.microsoftonline.com/${TENANT_ID}`,
-      redirectUri: window.location.href.split("?")[0].split("#")[0]
+      redirectUri: window.location.href.split("?")[0].split("#")[0],
+      postLogoutRedirectUri: window.location.href.split("?")[0].split("#")[0],
     },
     cache: { cacheLocation: "sessionStorage" }
   });

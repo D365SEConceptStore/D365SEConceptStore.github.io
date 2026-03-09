@@ -513,6 +513,7 @@ const msalInstance = new msal.PublicClientApplication({
     clientId: CLIENT_ID,
     authority: `https://login.microsoftonline.com/${TENANT_ID}`,
     redirectUri: location.href.split("?")[0].split("#")[0],
+    postLogoutRedirectUri: location.href.split("?")[0].split("#")[0],
   },
   cache: { cacheLocation: "sessionStorage", storeAuthStateInCookie: false }
 });
@@ -558,7 +559,11 @@ async function signIn() {
 
 function signOut() {
   try { localStorage.removeItem("ops_portal_theme"); } catch(e) {}
-  msalInstance.logoutRedirect();
+  const logoutRequest = {
+    account: currentAccount,
+    postLogoutRedirectUri: location.href.split("?")[0].split("#")[0],
+  };
+  msalInstance.logoutRedirect(logoutRequest);
 }
 
 // Listen for sign-out requests from child app iframes
