@@ -613,7 +613,7 @@
 
         // Fetch ALL vendors with paging — no $filter to avoid depth limit errors.
         // Join to POs in memory by account number + company.
-        let vUrl = `${D365_URL}/api/data/v9.2/mserp_vendvendorv2entities?$select=mserp_vendoraccountnumber,mserp_vendororganizationname,mserp_dataareaid`;
+        let vUrl = `${D365_URL}/api/data/v9.2/mserp_vendvendorv2entities?$select=mserp_vendoraccountnumber,mserp_vendororganizationname,mserp_dataareaid&cross-company=true`;
         let vPage = 0;
         while (vUrl) {
           vPage++;
