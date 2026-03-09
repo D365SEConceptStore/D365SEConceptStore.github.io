@@ -609,36 +609,44 @@
       updateLoadingMsg(`Loading vendor names…`);
       try {
         const vendorToken = await getToken();
-        const uniqueAccounts = [...new Set(rawData.map(r => r.mserp_ordervendoraccountnumber).filter(Boolean))];
-
-        // Fetch all vendors in batches of 50 using $filter IN clause
         const vendorMap = {};
-        const BATCH = 50;
-        for (let i = 0; i < uniqueAccounts.length; i += BATCH) {
-          const batch = uniqueAccounts.slice(i, i + BATCH);
-          const filterStr = batch.map(a => `mserp_accountnum eq '${a.replace(/'/g,"''")}'`).join(" or ");
-          const vendorUrl = `${D365_URL}/api/data/v9.2/mserp_vendvendorv2entities?$select=mserp_accountnum,mserp_vendororganizationname,mserp_dataareaid&$filter=${encodeURIComponent(filterStr)}`;
-          const vRes = await fetch(vendorUrl, {
+
+        // Fetch ALL vendors with paging — no $filter to avoid depth limit errors.
+        // Join to POs in memory by account number + company.
+        let vUrl = `${D365_URL}/api/data/v9.2/mserp_vendvendorv2entities?$select=mserp_vendoraccountnumber,mserp_vendororganizationname,mserp_dataareaid`;
+        let vPage = 0;
+        while (vUrl) {
+          vPage++;
+          const vRes = await fetch(vUrl, {
             headers: {
               "Authorization": `Bearer ${vendorToken}`,
               "Accept": "application/json",
               "OData-MaxVersion": "4.0",
               "OData-Version": "4.0",
+              "Prefer": "odata.maxpagesize=1000",
             }
           });
-          if (vRes.ok) {
-            const vJson = await vRes.json();
-            (vJson.value || []).forEach(v => {
-              const key = `${v.mserp_accountnum}__${v.mserp_dataareaid}`;
-              vendorMap[key] = v.mserp_vendororganizationname || v.mserp_accountnum;
-              if (!vendorMap[v.mserp_accountnum]) {
-                vendorMap[v.mserp_accountnum] = v.mserp_vendororganizationname || v.mserp_accountnum;
-              }
-            });
+          if (!vRes.ok) {
+            console.error(`Vendor fetch failed (${vRes.status}):`, await vRes.text());
+            break;
           }
+          const vJson = await vRes.json();
+          if (vPage === 1) console.log("Vendor entity sample record:", vJson.value?.[0]);
+          (vJson.value || []).forEach(v => {
+            const acct = v.mserp_vendoraccountnumber;
+            const name = v.mserp_vendororganizationname;
+            const area = v.mserp_dataareaid;
+            if (!acct) return;
+            // Prefer company-specific match; fallback to first seen
+            vendorMap[`${acct}__${area}`] = name || acct;
+            if (!vendorMap[acct]) vendorMap[acct] = name || acct;
+          });
+          vUrl = vJson["@odata.nextLink"] || null;
         }
 
-        // Join vendor names onto rawData
+        console.log(`Loaded ${Object.keys(vendorMap).length} vendor entries across ${vPage} page(s)`);
+
+        // Join onto PO rows
         rawData.forEach(r => {
           const key = `${r.mserp_ordervendoraccountnumber}__${r.mserp_dataareaid}`;
           r.mserp_vendororganizationname =
@@ -647,7 +655,8 @@
             null;
         });
       } catch(e) {
-        console.warn("Vendor name lookup failed, showing account codes only:", e.message);
+        console.error("Vendor name lookup failed:", e.message);
+        document.getElementById("data-range-label").textContent += " (vendor names unavailable)";
       }
       // ────────────────────────────────────────────────────────────
 
