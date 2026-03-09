@@ -611,40 +611,50 @@
         const vendorToken = await getToken();
         const vendorMap = {};
 
-        // Fetch ALL vendors with paging — no $filter to avoid depth limit errors.
-        // Join to POs in memory by account number + company.
-        let vUrl = `${D365_URL}/api/data/v9.2/mserp_vendvendorv2entities?$select=mserp_vendoraccountnumber,mserp_vendororganizationname,mserp_dataareaid&cross-company=true`;
-        let vPage = 0;
-        while (vUrl) {
-          vPage++;
-          const vRes = await fetch(vUrl, {
-            headers: {
-              "Authorization": `Bearer ${vendorToken}`,
-              "Accept": "application/json",
-              "OData-MaxVersion": "4.0",
-              "OData-Version": "4.0",
-              "Prefer": "odata.maxpagesize=1000",
+        // Get unique companies from loaded POs
+        const companies = [...new Set(rawData.map(r => r.mserp_dataareaid).filter(Boolean))];
+
+        // Fetch vendors per company — Dataverse virtual entities are company-scoped.
+        // Use CallerCompany header to switch context per company.
+        for (const company of companies) {
+          updateLoadingMsg(`Loading vendor names for ${company}…`);
+          let vUrl = `${D365_URL}/api/data/v9.2/mserp_vendvendorv2entities?$select=mserp_vendoraccountnumber,mserp_vendororganizationname,mserp_dataareaid`;
+          let vPage = 0;
+          while (vUrl) {
+            vPage++;
+            const vRes = await fetch(vUrl, {
+              headers: {
+                "Authorization": `Bearer ${vendorToken}`,
+                "Accept": "application/json",
+                "OData-MaxVersion": "4.0",
+                "OData-Version": "4.0",
+                "Prefer": "odata.maxpagesize=1000",
+                "CallerCompany": company,
+              }
+            });
+            if (!vRes.ok) {
+              console.warn(`Vendor fetch failed for ${company} (${vRes.status}):`, await vRes.text());
+              break;
             }
-          });
-          if (!vRes.ok) {
-            console.error(`Vendor fetch failed (${vRes.status}):`, await vRes.text());
-            break;
+            const vJson = await vRes.json();
+            if (vPage === 1 && company === companies[0]) {
+              console.log(`VENDOR PROBE [${company}] sample:`, vJson.value?.[0]);
+              const rec = vJson.value?.[0];
+              if (rec) console.log("VENDOR PROBE — all keys:", Object.keys(rec).filter(k => k.startsWith("mserp_")));
+            }
+            (vJson.value || []).forEach(v => {
+              const acct = v.mserp_vendoraccountnumber;
+              const name = v.mserp_vendororganizationname;
+              const area = v.mserp_dataareaid || company;
+              if (!acct) return;
+              vendorMap[`${acct}__${area}`] = name || acct;
+              if (!vendorMap[acct]) vendorMap[acct] = name || acct;
+            });
+            vUrl = vJson["@odata.nextLink"] || null;
           }
-          const vJson = await vRes.json();
-          if (vPage === 1) console.log("Vendor entity sample record:", vJson.value?.[0]);
-          (vJson.value || []).forEach(v => {
-            const acct = v.mserp_vendoraccountnumber;
-            const name = v.mserp_vendororganizationname;
-            const area = v.mserp_dataareaid;
-            if (!acct) return;
-            // Prefer company-specific match; fallback to first seen
-            vendorMap[`${acct}__${area}`] = name || acct;
-            if (!vendorMap[acct]) vendorMap[acct] = name || acct;
-          });
-          vUrl = vJson["@odata.nextLink"] || null;
         }
 
-        console.log(`Loaded ${Object.keys(vendorMap).length} vendor entries across ${vPage} page(s)`);
+        console.log(`Loaded ${Object.keys(vendorMap).length} vendor entries across ${companies.length} companies`);
 
         // Join onto PO rows
         rawData.forEach(r => {
