@@ -1,0 +1,1403 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Opportunity Pipeline</title>
+  <script type="text/javascript" src="https://alcdn.msauth.net/browser/2.35.0/js/msal-browser.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+  <style>
+    :root {
+      --bg:        #0d0f14;
+      --surface:   #13161e;
+      --card:      #181b24;
+      --card-alt:  #1e2230;
+      --border:    rgba(255,255,255,0.07);
+      --border-hi: rgba(255,255,255,0.14);
+      --accent:    #4f8eff;
+      --accent2:   #a78bfa;
+      --accent3:   #34d399;
+      --accent4:   #fbbf24;
+      --accent5:   #f87171;
+      --text:      #e8eaf0;
+      --text-dim:  #8891a8;
+      --text-faint:#4b5268;
+      --mono:      'DM Mono', monospace;
+      --sans:      'DM Sans', sans-serif;
+      --radius:    12px;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--sans);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* ── HEADER ── */
+    header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 0 32px;
+      height: 58px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 50;
+    }
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .logo-mark {
+      width: 30px; height: 30px;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 14px;
+    }
+    .logo-text {
+      font-family: var(--mono);
+      font-size: 12px;
+      font-weight: 500;
+      letter-spacing: 0.12em;
+      color: var(--text-dim);
+    }
+    .logo-text strong { color: var(--text); font-weight: 500; }
+    .header-right { display: flex; align-items: center; gap: 12px; }
+
+    .pill {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 5px 12px;
+      border-radius: 20px;
+      border: 1px solid var(--border);
+      font-family: var(--mono);
+      font-size: 10px;
+      letter-spacing: 0.1em;
+      color: var(--text-dim);
+    }
+    .pill .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--text-faint); }
+    .pill.live .dot { background: var(--accent3); box-shadow: 0 0 8px var(--accent3); }
+    .pill.live { color: var(--accent3); border-color: rgba(52,211,153,0.25); }
+
+    /* ── BUTTONS ── */
+    .btn {
+      font-family: var(--sans); font-size: 12px; font-weight: 500;
+      border: 1px solid var(--border); cursor: pointer;
+      padding: 8px 16px; border-radius: 8px;
+      transition: all 0.15s; letter-spacing: 0.02em;
+      background: transparent; color: var(--text-dim);
+    }
+    .btn:hover { border-color: var(--border-hi); color: var(--text); background: var(--card-alt); }
+    .btn-primary {
+      background: var(--accent); color: #fff; border-color: transparent;
+      font-size: 13px; font-weight: 600; padding: 11px 28px; border-radius: 10px;
+    }
+    .btn-primary:hover { background: #6b9fff; box-shadow: 0 0 24px rgba(79,142,255,0.35); transform: translateY(-1px); }
+
+    /* ── LOGIN ── */
+    #login-panel {
+      display: flex; flex-direction: column; align-items: center;
+      justify-content: center; min-height: calc(100vh - 58px);
+      gap: 20px; padding: 40px;
+      animation: fadeUp 0.5s ease;
+    }
+    .login-icon {
+      width: 72px; height: 72px;
+      background: linear-gradient(135deg, rgba(79,142,255,0.2), rgba(167,139,250,0.2));
+      border: 1px solid rgba(79,142,255,0.3);
+      border-radius: 20px; display: flex; align-items: center; justify-content: center; font-size: 32px;
+    }
+    .login-title { font-size: 30px; font-weight: 700; text-align: center; }
+    .login-title span { background: linear-gradient(135deg, var(--accent), var(--accent2)); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+    .login-sub { font-size: 14px; color: var(--text-dim); text-align: center; max-width: 360px; line-height: 1.7; }
+
+    /* ── DASHBOARD ── */
+    #dashboard { display: none; padding: 20px 28px 40px; animation: fadeUp 0.4s ease; }
+
+    /* ── CONTROLS ── */
+    .controls {
+      display: flex; align-items: center; gap: 10px;
+      margin-bottom: 20px; flex-wrap: wrap;
+    }
+    .controls-left { flex: 1; display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+    .page-title { font-size: 19px; font-weight: 700; }
+    .page-sub { font-size: 11px; color: var(--text-faint); font-family: var(--mono); margin-top: 3px; }
+
+    select {
+      background-color: var(--card); border: 1px solid var(--border);
+      color: var(--text); font-family: var(--sans); font-size: 12px;
+      padding: 8px 12px; border-radius: 8px; outline: none; cursor: pointer;
+      transition: border-color 0.2s, background-color 0.2s, color 0.2s; appearance: none;
+      background-image: var(--select-arrow, url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%238891a8'/%3E%3C/svg%3E"));
+      background-repeat: no-repeat; background-position: right 10px center;
+      padding-right: 28px;
+    }
+    select:focus { border-color: var(--accent); }
+    select option { background-color: var(--card-alt); color: var(--text); }
+    label.ctrl-label { font-size: 11px; color: var(--text-faint); font-weight: 500; transition: color 0.2s; }
+
+    /* ── KPI GRID ── */
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 10px; margin-bottom: 16px;
+    }
+    .kpi-card {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 18px 20px;
+      position: relative; overflow: hidden;
+      transition: transform 0.2s, border-color 0.2s, box-shadow 0.2s;
+    }
+    .kpi-card:hover { transform: translateY(-3px); border-color: var(--border-hi); box-shadow: 0 12px 40px rgba(0,0,0,0.3); }
+    .kpi-card::after {
+      content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 1px;
+      background: linear-gradient(90deg, transparent, currentColor, transparent);
+      opacity: 0.12;
+    }
+    .kpi-accent { width: 3px; height: 36px; border-radius: 2px; position: absolute; left: 0; top: 50%; transform: translateY(-50%); }
+    .kpi-label { font-size: 10px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-faint); margin-bottom: 10px; }
+    .kpi-value { font-family: var(--mono); font-size: 24px; font-weight: 500; line-height: 1; }
+    .kpi-sub { font-size: 11px; color: var(--text-dim); margin-top: 7px; }
+    .kpi-icon { position: absolute; right: 14px; top: 14px; font-size: 20px; opacity: 0.12; }
+
+    /* ── MAIN GRID ── */
+    .main-grid {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;
+    }
+    @media (max-width: 860px) { .main-grid { grid-template-columns: 1fr; } }
+
+    .card {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 20px 22px;
+    }
+    .card.full { grid-column: 1 / -1; }
+    .card-title { font-size: 13px; font-weight: 600; margin-bottom: 3px; }
+    .card-sub { font-size: 11px; color: var(--text-faint); font-family: var(--mono); margin-bottom: 18px; }
+    .chart-wrap { position: relative; height: 230px; }
+    .chart-wrap.tall { height: 300px; }
+
+    /* ── FUNNEL / STAGE BARS ── */
+    .funnel-list { display: flex; flex-direction: column; gap: 10px; }
+    .funnel-row { display: flex; align-items: center; gap: 12px; }
+    .funnel-label { width: 140px; font-size: 12px; color: var(--text-dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; flex-shrink: 0; }
+    .funnel-bar-wrap { flex: 1; height: 6px; background: var(--card-alt); border-radius: 3px; overflow: hidden; }
+    .funnel-bar { height: 100%; border-radius: 3px; transition: width 0.5s ease; }
+    .funnel-count { width: 44px; text-align: right; font-family: var(--mono); font-size: 11px; color: var(--text-dim); }
+    .funnel-val { width: 90px; text-align: right; font-family: var(--mono); font-size: 11px; color: var(--text-dim); }
+
+    /* ── OPPORTUNITY TABLE ── */
+    .tbl-wrap { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; font-size: 12px; }
+    thead th {
+      padding: 10px 12px; text-align: left;
+      font-size: 10px; font-weight: 600; letter-spacing: 0.1em;
+      text-transform: uppercase; color: var(--text-faint);
+      border-bottom: 1px solid var(--border); cursor: pointer; white-space: nowrap;
+      user-select: none;
+    }
+    thead th:hover { color: var(--text-dim); }
+    td { padding: 11px 12px; border-bottom: 1px solid var(--border); font-size: 12px; white-space: nowrap; }
+    tr:last-child td { border-bottom: none; }
+    tbody tr:hover td { background: var(--card-alt); }
+    .mono { font-family: var(--mono); }
+    .text-right { text-align: right; }
+    .text-dim { color: var(--text-dim); }
+
+    /* ── STAGE BADGE ── */
+    .badge {
+      display: inline-block; padding: 2px 8px; border-radius: 20px;
+      font-size: 10px; font-weight: 500; letter-spacing: 0.04em;
+      white-space: nowrap;
+    }
+    .badge-qualify   { background: rgba(79,142,255,0.15); color: #6b9fff; border: 1px solid rgba(79,142,255,0.2); }
+    .badge-develop   { background: rgba(167,139,250,0.15); color: #b4a0fb; border: 1px solid rgba(167,139,250,0.2); }
+    .badge-propose   { background: rgba(251,191,36,0.15); color: #fcd34d; border: 1px solid rgba(251,191,36,0.2); }
+    .badge-close     { background: rgba(52,211,153,0.15); color: #6ee7b7; border: 1px solid rgba(52,211,153,0.2); }
+    .badge-won       { background: rgba(52,211,153,0.25); color: #34d399; border: 1px solid rgba(52,211,153,0.35); }
+    .badge-lost      { background: rgba(248,113,113,0.15); color: #fca5a5; border: 1px solid rgba(248,113,113,0.2); }
+    .badge-default   { background: rgba(136,145,168,0.15); color: var(--text-dim); border: 1px solid var(--border); }
+
+    /* ── PROB BAR ── */
+    .prob-wrap { display: flex; align-items: center; gap: 6px; }
+    .prob-bar-bg { width: 50px; height: 4px; background: var(--card-alt); border-radius: 2px; }
+    .prob-bar-fill { height: 100%; border-radius: 2px; background: var(--accent); }
+
+    /* ── LOADING / STATES ── */
+    .state-box {
+      display: flex; flex-direction: column; align-items: center;
+      justify-content: center; min-height: 200px; gap: 14px;
+      color: var(--text-faint); font-family: var(--mono); font-size: 11px; letter-spacing: 0.08em;
+    }
+    .spinner {
+      width: 28px; height: 28px;
+      border: 2px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    .error-msg { color: var(--accent5); text-align: center; max-width: 400px; line-height: 1.7; }
+
+    /* ── SIDE PANEL ── */
+    #opp-overlay {
+      display: none; position: fixed; inset: 0;
+      background: rgba(0,0,0,0.5); z-index: 200; backdrop-filter: blur(3px);
+    }
+    #opp-panel {
+      position: fixed; top: 0; right: -760px; width: 760px; height: 100vh;
+      background: var(--surface); border-left: 1px solid var(--border);
+      box-shadow: -16px 0 64px rgba(0,0,0,0.4);
+      z-index: 201; display: flex; flex-direction: column;
+      transition: right 0.32s cubic-bezier(0.4,0,0.2,1);
+    }
+    .panel-header { padding: 18px 22px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; }
+    .panel-title { font-size: 16px; font-weight: 700; }
+    .panel-sub { font-size: 11px; color: var(--text-faint); font-family: var(--mono); margin-top: 3px; }
+    .panel-search-wrap { padding: 12px 22px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+    .panel-search {
+      width: 100%; background: var(--card); border: 1px solid var(--border);
+      border-radius: 8px; padding: 9px 14px; font-size: 13px;
+      font-family: var(--sans); color: var(--text); outline: none;
+    }
+    .panel-search::placeholder { color: var(--text-faint); }
+    .panel-search:focus { border-color: var(--accent); }
+    .panel-body { flex: 1; overflow-y: auto; overflow-x: auto; }
+    .panel-footer { padding: 12px 22px; border-top: 1px solid var(--border); font-size: 11px; color: var(--text-faint); font-family: var(--mono); flex-shrink: 0; }
+
+    /* ── STAGE PIPELINE STRIP ── */
+    .stage-strip {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 0;
+      margin-bottom: 16px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+    .stage-step {
+      position: relative;
+      padding: 20px 22px 18px;
+      border-right: 1px solid var(--border);
+      cursor: default;
+      transition: background 0.2s;
+    }
+    .stage-step:last-child { border-right: none; }
+    .stage-step:hover { background: var(--card-alt); }
+
+    /* arrow connector */
+    .stage-step:not(:last-child)::after {
+      content: '';
+      position: absolute;
+      right: -13px; top: 50%;
+      transform: translateY(-50%);
+      width: 0; height: 0;
+      border-top: 12px solid transparent;
+      border-bottom: 12px solid transparent;
+      border-left: 13px solid var(--border);
+      z-index: 2;
+    }
+    .stage-step:not(:last-child)::before {
+      content: '';
+      position: absolute;
+      right: -11px; top: 50%;
+      transform: translateY(-50%);
+      width: 0; height: 0;
+      border-top: 11px solid transparent;
+      border-bottom: 11px solid transparent;
+      border-left: 12px solid var(--card);
+      z-index: 3;
+      transition: border-left-color 0.2s;
+    }
+    .stage-step:hover::before { border-left-color: var(--card-alt); }
+
+    .stage-num {
+      font-size: 10px; font-weight: 600; letter-spacing: 0.14em;
+      text-transform: uppercase; margin-bottom: 10px;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .stage-dot {
+      width: 8px; height: 8px; border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .stage-count {
+      font-family: var(--mono); font-size: 32px; font-weight: 500;
+      line-height: 1; margin-bottom: 4px;
+    }
+    .stage-value {
+      font-family: var(--mono); font-size: 13px; font-weight: 400;
+      color: var(--text-dim); margin-bottom: 12px;
+    }
+    .stage-bar-bg {
+      height: 3px; background: var(--card-alt); border-radius: 2px; overflow: hidden;
+    }
+    .stage-bar-fill {
+      height: 100%; border-radius: 2px;
+      transition: width 0.6s cubic-bezier(0.4,0,0.2,1);
+    }
+    @media (max-width: 700px) {
+      .stage-strip { grid-template-columns: 1fr 1fr; }
+      .stage-step::after, .stage-step::before { display: none; }
+      .stage-step { border-right: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+    }
+
+    /* ── SETTINGS PANEL ── */
+    #settings-overlay {
+      display: none; position: fixed; inset: 0;
+      background: rgba(0,0,0,0.45); z-index: 300; backdrop-filter: blur(3px);
+    }
+    #settings-panel {
+      position: fixed; top: 0; right: -360px; width: 360px; height: 100vh;
+      background: var(--surface); border-left: 1px solid var(--border);
+      box-shadow: -16px 0 64px rgba(0,0,0,0.4);
+      z-index: 301; display: flex; flex-direction: column;
+      transition: right 0.3s cubic-bezier(0.4,0,0.2,1);
+    }
+    .settings-header {
+      padding: 20px 22px; border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: space-between; flex-shrink: 0;
+    }
+    .settings-title { font-size: 15px; font-weight: 700; }
+    .settings-body { flex: 1; overflow-y: auto; padding: 22px; }
+    .settings-section-label {
+      font-size: 10px; font-weight: 600; letter-spacing: 0.14em;
+      text-transform: uppercase; color: var(--text-faint);
+      margin-bottom: 12px; margin-top: 20px;
+    }
+    .settings-section-label:first-child { margin-top: 0; }
+    .theme-grid {
+      display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px;
+    }
+    .theme-swatch {
+      border-radius: 10px; overflow: hidden; cursor: pointer;
+      border: 2px solid transparent;
+      transition: border-color 0.15s, transform 0.15s, box-shadow 0.15s;
+      aspect-ratio: 1;
+      position: relative;
+    }
+    .theme-swatch:hover { transform: scale(1.06); box-shadow: 0 4px 16px rgba(0,0,0,0.3); }
+    .theme-swatch.active { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(79,142,255,0.3); }
+    .theme-swatch .swatch-bg {
+      width: 100%; height: 60%; display: flex; align-items: center; justify-content: center;
+    }
+    .theme-swatch .swatch-accent {
+      height: 40%; display: flex; align-items: center; justify-content: center;
+      font-size: 9px; font-weight: 600; letter-spacing: 0.06em;
+      font-family: var(--mono);
+    }
+    .theme-swatch .check {
+      display: none; position: absolute; top: 4px; right: 4px;
+      width: 16px; height: 16px; border-radius: 50%;
+      background: var(--accent); color: #fff;
+      font-size: 9px; align-items: center; justify-content: center;
+    }
+    .theme-swatch.active .check { display: flex; }
+    .settings-divider {
+      height: 1px; background: var(--border); margin: 20px 0;
+    }
+
+    /* ── ANIMATIONS ── */
+    @keyframes spin { to { transform: rotate(360deg); } }
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(12px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    footer {
+      padding: 16px 32px; border-top: 1px solid var(--border);
+      font-family: var(--mono); font-size: 10px; color: var(--text-faint);
+      display: flex; justify-content: space-between; letter-spacing: 0.08em;
+    }
+  </style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header>
+  <div class="logo">
+    <div class="logo-mark">🎯</div>
+    <div class="logo-text">
+      <strong>OPPORTUNITY</strong> / PIPELINE DASHBOARD
+    </div>
+  </div>
+  <div class="header-right">
+    <div class="pill" id="status-pill">
+      <div class="dot"></div>
+      <span id="status-text">NOT CONNECTED</span>
+    </div>
+    <button class="btn" id="signout-btn" style="display:none" onclick="signOut()">Sign out</button>
+    <button class="btn" onclick="openSettings()" title="Settings" style="padding:8px 10px;font-size:15px;line-height:1">⚙</button>
+  </div>
+</header>
+
+<!-- LOGIN -->
+<div id="login-panel">
+  <div class="login-icon">🎯</div>
+  <div class="login-title"><span>Opportunity</span> Pipeline</div>
+  <p class="login-sub">Sign in with your Microsoft account to load live opportunity data from Dynamics 365 CRM.</p>
+  <button class="btn btn-primary" onclick="signIn()">Sign in with Microsoft</button>
+</div>
+
+<!-- DASHBOARD -->
+<div id="dashboard">
+
+  <!-- Controls bar -->
+  <div class="controls">
+    <div class="controls-left">
+      <div>
+        <div class="page-title">Pipeline Overview</div>
+        <div class="page-sub" id="data-range-label">—</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <label class="ctrl-label">Stage</label>
+        <select id="stage-filter" onchange="applyFilters()">
+          <option value="">All stages</option>
+        </select>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <label class="ctrl-label">Owner</label>
+        <select id="owner-filter" onchange="applyFilters()">
+          <option value="">All owners</option>
+        </select>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <label class="ctrl-label">Close Year</label>
+        <select id="year-filter" onchange="applyFilters()">
+          <option value="">All years</option>
+        </select>
+      </div>
+    </div>
+    <button class="btn" onclick="loadData()" id="refresh-btn">↺ Refresh</button>
+    <button class="btn" onclick="openOppPanel()">≡ All Opportunities</button>
+  </div>
+
+  <!-- KPIs -->
+  <div class="kpi-grid">
+    <div class="kpi-card">
+      <div class="kpi-accent" style="background:var(--accent)"></div>
+      <div class="kpi-icon">💼</div>
+      <div class="kpi-label">Total Pipeline</div>
+      <div class="kpi-value" id="kpi-pipeline" style="color:var(--accent)">—</div>
+      <div class="kpi-sub" id="kpi-pipeline-sub"></div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-accent" style="background:var(--accent3)"></div>
+      <div class="kpi-icon">🏆</div>
+      <div class="kpi-label">Won (Est. Revenue)</div>
+      <div class="kpi-value" id="kpi-won" style="color:var(--accent3)">—</div>
+      <div class="kpi-sub" id="kpi-won-sub"></div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-accent" style="background:var(--accent2)"></div>
+      <div class="kpi-icon">📊</div>
+      <div class="kpi-label">Weighted Pipeline</div>
+      <div class="kpi-value" id="kpi-weighted" style="color:var(--accent2)">—</div>
+      <div class="kpi-sub" id="kpi-weighted-sub"></div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-accent" style="background:var(--accent4)"></div>
+      <div class="kpi-icon">📋</div>
+      <div class="kpi-label">Open Opportunities</div>
+      <div class="kpi-value" id="kpi-open" style="color:var(--accent4)">—</div>
+      <div class="kpi-sub" id="kpi-open-sub"></div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-accent" style="background:var(--accent5)"></div>
+      <div class="kpi-icon">❌</div>
+      <div class="kpi-label">Lost</div>
+      <div class="kpi-value" id="kpi-lost" style="color:var(--accent5)">—</div>
+      <div class="kpi-sub" id="kpi-lost-sub"></div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-accent" style="background:#fb923c"></div>
+      <div class="kpi-icon">⏰</div>
+      <div class="kpi-label">Avg Close Probability</div>
+      <div class="kpi-value" id="kpi-prob" style="color:#fb923c">—</div>
+      <div class="kpi-sub" id="kpi-prob-sub"></div>
+    </div>
+  </div>
+
+  <!-- Stage Pipeline Strip -->
+  <div id="stage-strip" class="stage-strip">
+    <!-- rendered by JS -->
+  </div>
+
+  <!-- Top opportunities table -->
+  <div class="card" style="margin-bottom:12px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
+      <div class="card-title">Top Opportunities</div>
+      <button class="btn" style="font-size:11px;padding:6px 12px" onclick="openOppPanel()">View all →</button>
+    </div>
+    <div class="card-sub">Highest estimated value open opportunities</div>
+    <div class="tbl-wrap" id="top-opps-wrap">
+      <div class="state-box"><div class="spinner"></div><span>Loading…</span></div>
+    </div>
+  </div>
+
+  <!-- Charts row -->
+  <div class="main-grid">
+
+    <!-- Win/Loss donut -->
+    <div class="card">
+      <div class="card-title">Win / Loss / Active</div>
+      <div class="card-sub">Status code distribution</div>
+      <div class="chart-wrap"><canvas id="chart-status"></canvas></div>
+    </div>
+
+    <!-- Close date by month bar -->
+    <div class="card full">
+      <div class="card-title">Expected Close by Month</div>
+      <div class="card-sub">Estimated value of opportunities closing each month</div>
+      <div class="chart-wrap tall"><canvas id="chart-close-month"></canvas></div>
+    </div>
+
+  </div>
+
+
+</div>
+
+<!-- SIDE PANEL OVERLAY -->
+<div id="opp-overlay" onclick="closeOppPanel()"></div>
+
+<!-- SIDE PANEL -->
+<div id="opp-panel">
+  <div class="panel-header">
+    <div>
+      <div class="panel-title" id="opp-panel-title">All Opportunities</div>
+      <div class="panel-sub" id="opp-panel-sub"></div>
+    </div>
+    <button class="btn" onclick="closeOppPanel()">✕ Close</button>
+  </div>
+  <div class="panel-search-wrap">
+    <input class="panel-search" type="text" id="opp-search" placeholder="Search by name, account, owner…" oninput="filterOppGrid()"/>
+  </div>
+  <div class="panel-body">
+    <table id="opp-grid" style="width:100%;border-collapse:collapse;font-size:12px;">
+      <thead style="position:sticky;top:0;background:var(--surface);z-index:1;">
+        <tr>
+          <th onclick="sortOpp('name')" style="padding:10px 12px;text-align:left;font-size:10px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-faint);border-bottom:1px solid var(--border);cursor:pointer;white-space:nowrap;">Name ↕</th>
+          <th onclick="sortOpp('salesstage')" style="padding:10px 12px;text-align:left;font-size:10px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-faint);border-bottom:1px solid var(--border);cursor:pointer;white-space:nowrap;">Stage ↕</th>
+          <th onclick="sortOpp('estimatedvalue')" style="padding:10px 12px;text-align:right;font-size:10px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-faint);border-bottom:1px solid var(--border);cursor:pointer;white-space:nowrap;">Est. Value ↕</th>
+          <th onclick="sortOpp('closeprobability')" style="padding:10px 12px;text-align:right;font-size:10px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-faint);border-bottom:1px solid var(--border);cursor:pointer;white-space:nowrap;">Prob. ↕</th>
+          <th onclick="sortOpp('estimatedclosedate')" style="padding:10px 12px;text-align:left;font-size:10px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-faint);border-bottom:1px solid var(--border);cursor:pointer;white-space:nowrap;">Close Date ↕</th>
+          <th onclick="sortOpp('ownerid')" style="padding:10px 12px;text-align:left;font-size:10px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-faint);border-bottom:1px solid var(--border);cursor:pointer;white-space:nowrap;">Owner ↕</th>
+          <th onclick="sortOpp('statuscode')" style="padding:10px 12px;text-align:left;font-size:10px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-faint);border-bottom:1px solid var(--border);cursor:pointer;white-space:nowrap;">Status ↕</th>
+          <th onclick="sortOpp('totalamount')" style="padding:10px 12px;text-align:right;font-size:10px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-faint);border-bottom:1px solid var(--border);cursor:pointer;white-space:nowrap;">Total Amt ↕</th>
+        </tr>
+      </thead>
+      <tbody id="opp-tbody"></tbody>
+    </table>
+  </div>
+  <div class="panel-footer" id="opp-count-label"></div>
+</div>
+
+<!-- SETTINGS OVERLAY -->
+<div id="settings-overlay" onclick="closeSettings()"></div>
+
+<!-- SETTINGS PANEL -->
+<div id="settings-panel">
+  <div class="settings-header">
+    <div class="settings-title">⚙ Settings</div>
+    <button class="btn" onclick="closeSettings()">✕ Close</button>
+  </div>
+  <div class="settings-body">
+
+    <div class="settings-section-label">🌑 Dark Themes</div>
+    <div class="theme-grid" id="dark-themes"></div>
+
+    <div class="settings-divider"></div>
+
+    <div class="settings-section-label">☀️ Light Themes</div>
+    <div class="theme-grid" id="light-themes"></div>
+
+  </div>
+</div>
+
+<footer>
+  <span>Opportunity Pipeline — Dynamics 365 CRM</span>
+  <span id="footer-user"></span>
+</footer>
+
+<script>
+  // ─────────────────────────────────────────
+  //  CONFIG  — update these for your tenant
+  // ─────────────────────────────────────────
+  const TENANT_ID    = "3216ff05-4e76-4673-9760-8546567f2fca";
+  const CLIENT_ID    = "c54efe5e-4094-43db-830c-eaf127a06510";
+  const D365_URL     = "https://operations-sales-demo.crm4.dynamics.com";
+  const ENTITY       = "opportunities";
+  const ORG_CURRENCY = "USD"; // ← change to your org's base currency, e.g. "SEK", "EUR", "GBP"
+  // ─────────────────────────────────────────
+
+  const msalConfig = {
+    auth: {
+      clientId: CLIENT_ID,
+      authority: `https://login.microsoftonline.com/${TENANT_ID}`,
+      redirectUri: window.location.href.split("?")[0].split("#")[0],
+    },
+    cache: { cacheLocation: "sessionStorage" }
+  };
+  const msalInstance = new msal.PublicClientApplication(msalConfig);
+  const loginRequest = { scopes: [`${D365_URL}/.default`] };
+  let currentAccount = null;
+  let msalReady = false;
+  let rawData = [];
+  let charts = {};
+
+  msalInstance.initialize().then(() => {
+    msalReady = true;
+    return msalInstance.handleRedirectPromise();
+  }).then(res => {
+    if (res) setAccount(res.account);
+    else {
+      const accs = msalInstance.getAllAccounts();
+      if (accs.length > 0) setAccount(accs[0]);
+    }
+  }).catch(console.error);
+
+  function setAccount(account) {
+    currentAccount = account;
+    document.getElementById("login-panel").style.display = "none";
+    document.getElementById("dashboard").style.display = "block";
+    document.getElementById("signout-btn").style.display = "block";
+    const pill = document.getElementById("status-pill");
+    pill.classList.add("live");
+    document.getElementById("status-text").textContent = account.username;
+    document.getElementById("footer-user").textContent = account.username;
+    loadData();
+  }
+
+  async function signIn() {
+    if (!msalReady) { alert("Still initializing, try again."); return; }
+    try { await msalInstance.loginRedirect(loginRequest); }
+    catch(e) { alert("Login failed: " + e.message); }
+  }
+  function signOut() { msalInstance.logoutRedirect(); }
+
+  async function getToken() {
+    const req = { ...loginRequest, account: currentAccount };
+    try {
+      const res = await msalInstance.acquireTokenSilent(req);
+      return res.accessToken;
+    } catch(e) {
+      await msalInstance.acquireTokenRedirect(req);
+    }
+  }
+
+  // ── Data loading ──
+  // Debounce timer for filter changes
+  let filterTimer = null;
+
+  async function loadData() {
+    const btn = document.getElementById("refresh-btn");
+    btn.textContent = "Loading…"; btn.disabled = true;
+    document.getElementById("top-opps-wrap").innerHTML =
+      '<div class="state-box"><div class="spinner"></div><span>Fetching opportunities…</span></div>';
+
+    try {
+      const token = await getToken();
+
+      // Only fields actually used in the UI — heavy text fields removed
+      const fields = [
+        "opportunityid",
+        "name",
+        "salesstage",
+        "statuscode",
+        "statecode",
+        "estimatedvalue",
+        "estimatedclosedate",
+        "closeprobability",
+        "totalamount",
+        "totallineitemamount",
+        "totaldiscountamount",
+        "discountpercentage",
+        "budgetamount",
+        "freightamount",
+        "totaltax",
+        "_ownerid_value",
+        "_customerid_value",
+        "_accountid_value",
+        "prioritycode",
+        "msdyn_forecastcategory",
+        "msdyn_opportunityscore",
+        "msdyn_opportunitygrade",
+        "msdyn_opportunityscoretrend",
+        "decisionmaker",
+        "confirminterest",
+        "createdon",
+        "modifiedon",
+        "actualclosedate",
+        "actualvalue",
+        "opportunityratingcode"
+      ].join(",");
+
+      // Server-side filter: active opportunities only (statecode 0)
+      // + won/lost from current year so win-rate chart is meaningful
+      const thisYear = new Date().getFullYear();
+      const serverFilter = encodeURIComponent(
+        `statecode eq 0 or (statecode ne 0 and createdon ge ${thisYear}-01-01T00:00:00Z)`
+      );
+
+      const PAGE = 500; // smaller pages = first page renders faster
+      let url = `${D365_URL}/api/data/v9.2/${ENTITY}?$select=${fields}&$filter=${serverFilter}&$orderby=estimatedvalue desc&$top=${PAGE}`;
+      rawData = [];
+      let page = 0;
+
+      while (url) {
+        page++;
+        document.getElementById("top-opps-wrap").innerHTML =
+          `<div class="state-box"><div class="spinner"></div><span>Loading page ${page} — ${rawData.length} records…</span></div>`;
+
+        const res = await fetch(url, {
+          headers: {
+            "Authorization": `Bearer ${token}`,
+            "Accept": "application/json",
+            "OData-MaxVersion": "4.0",
+            "OData-Version": "4.0",
+            "Prefer": `odata.maxpagesize=${PAGE},odata.include-annotations="OData.Community.Display.V1.FormattedValue"`
+          }
+        });
+
+        // Fix: on 401 (expired token), force a fresh token and retry once
+        if (res.status === 401) {
+          const freshToken = await msalInstance.acquireTokenSilent({ ...loginRequest, account: currentAccount, forceRefresh: true })
+            .then(r => r.accessToken)
+            .catch(() => msalInstance.acquireTokenRedirect(loginRequest));
+          if (!freshToken) return;
+          const retry = await fetch(url, {
+            headers: {
+              "Authorization": `Bearer ${freshToken}`,
+              "Accept": "application/json",
+              "OData-MaxVersion": "4.0",
+              "OData-Version": "4.0",
+              "Prefer": `odata.maxpagesize=${PAGE},odata.include-annotations="OData.Community.Display.V1.FormattedValue"`
+            }
+          });
+          if (!retry.ok) throw new Error(`${retry.status} — ${await retry.text()}`);
+          const retryData = await retry.json();
+          rawData = rawData.concat(retryData.value || []);
+          url = retryData["@odata.nextLink"] || null;
+          continue;
+        }
+
+        if (!res.ok) throw new Error(`${res.status} — ${await res.text()}`);
+        const data = await res.json();
+        rawData = rawData.concat(data.value || []);
+        url = data["@odata.nextLink"] || null;
+      }
+
+      populateFilters();
+      applyFilters();
+
+    } catch(e) {
+      document.getElementById("top-opps-wrap").innerHTML =
+        `<div class="state-box"><div class="error-msg">⚠ ${esc(e.message)}</div></div>`;
+    } finally {
+      btn.textContent = "↺ Refresh"; btn.disabled = false;
+    }
+  }
+
+  // ── Filters ──
+  function populateFilters() {
+    // salesstage is an integer OptionSet — build unique int→label map
+    const stageMap = {};
+    rawData.forEach(r => {
+      const intVal = r.salesstage;
+      if (intVal === null || intVal === undefined) return;
+      if (!stageMap[intVal]) {
+        stageMap[intVal] = r["salesstage@OData.Community.Display.V1.FormattedValue"]
+                        || { 0:"Qualify",1:"Develop",2:"Propose",3:"Close" }[intVal]
+                        || String(intVal);
+      }
+    });
+    // Sort by integer value
+    const sortedStageInts = Object.keys(stageMap).map(Number).sort((a,b)=>a-b);
+    document.getElementById("stage-filter").innerHTML = '<option value="">All stages</option>' +
+      sortedStageInts.map(i => `<option value="${i}">${esc(stageMap[i])}</option>`).join("");
+
+    const owners = [...new Set(rawData.map(r => r["_ownerid_value@OData.Community.Display.V1.FormattedValue"] || r._ownerid_value).filter(Boolean))].sort();
+    document.getElementById("owner-filter").innerHTML = '<option value="">All owners</option>' +
+      owners.map(o => `<option value="${esc(o)}">${esc(o)}</option>`).join("");
+
+    const years = [...new Set(rawData.map(r => {
+      if (!r.estimatedclosedate) return null;
+      return new Date(r.estimatedclosedate).getFullYear();
+    }).filter(Boolean))].sort();
+    document.getElementById("year-filter").innerHTML = '<option value="">All years</option>' +
+      years.map(y => `<option value="${y}">${y}</option>`).join("");
+  }
+
+  function applyFilters() {
+    clearTimeout(filterTimer);
+    filterTimer = setTimeout(_doApplyFilters, 150);
+  }
+
+  function _doApplyFilters() {
+    const stage = document.getElementById("stage-filter").value;
+    const owner = document.getElementById("owner-filter").value;
+    const year  = document.getElementById("year-filter").value;
+
+    let filtered = rawData;
+    if (stage !== "") filtered = filtered.filter(r => r.salesstage === parseInt(stage));
+    if (owner) filtered = filtered.filter(r => {
+      const o = r["_ownerid_value@OData.Community.Display.V1.FormattedValue"] || r._ownerid_value || "";
+      return o === owner;
+    });
+    if (year)  filtered = filtered.filter(r => {
+      if (!r.estimatedclosedate) return false;
+      return new Date(r.estimatedclosedate).getFullYear() === parseInt(year);
+    });
+
+    renderDashboard(filtered);
+  }
+
+  // ── Render ──
+  function renderDashboard(data) {
+    if (!data.length) {
+      document.getElementById("top-opps-wrap").innerHTML =
+        '<div class="state-box"><span>No records match the current filters.</span></div>';
+      return;
+    }
+    try {
+      _renderDashboardInner(data);
+    } catch(err) {
+      console.error("renderDashboard error:", err);
+      document.getElementById("top-opps-wrap").innerHTML =
+        `<div class="state-box"><div class="error-msg">⚠ Render error: ${esc(err.message)}</div></div>`;
+    }
+  }
+
+  function _renderDashboardInner(data) {
+    const open   = data.filter(r => r.statecode === 0);          // Active
+    const won    = data.filter(r => r.statecode === 1);           // Won
+    const lost   = data.filter(r => r.statecode === 2);           // Lost/Cancelled
+
+    // KPIs
+    const totalPipeline  = open.reduce((s,r) => s + (parseFloat(r.estimatedvalue) || 0), 0);
+    const wonValue       = won.reduce((s,r) => s + (parseFloat(r.actualvalue || r.estimatedvalue) || 0), 0);
+    const weightedPipe   = open.reduce((s,r) => s + (parseFloat(r.estimatedvalue)||0) * ((parseFloat(r.closeprobability)||0)/100), 0);
+    const lostCount      = lost.length;
+    const lostValue      = lost.reduce((s,r) => s + (parseFloat(r.estimatedvalue) || 0), 0);
+    const avgProb        = open.length ? open.reduce((s,r) => s + (parseFloat(r.closeprobability)||0), 0) / open.length : 0;
+
+    setKpi("kpi-pipeline", fmtCur(totalPipeline), `${open.length} active opportunities`);
+    setKpi("kpi-won", fmtCur(wonValue), `${won.length} won`);
+    setKpi("kpi-weighted", fmtCur(weightedPipe), "probability-weighted");
+    setKpi("kpi-open", open.length.toLocaleString(), "active in pipeline");
+    setKpi("kpi-lost", `${lostCount}`, `${fmtCur(lostValue)} foregone`);
+    setKpi("kpi-prob", Math.round(avgProb) + "%", "avg win probability");
+
+    // Date range
+    const dates = data.map(r => r.estimatedclosedate).filter(Boolean).sort();
+    if (dates.length) {
+      document.getElementById("data-range-label").textContent =
+        `${data.length} total · closes ${fmtDate(dates[0])} → ${fmtDate(dates[dates.length-1])}`;
+    }
+
+    // ── Stage Pipeline Strip ──
+    // salesstage is an integer OptionSet. D365 OData returns both:
+    //   r.salesstage          → integer (0,1,2,3…)
+    //   r["salesstage@OData.Community.Display.V1.FormattedValue"] → display label
+    // We group by integer value, but display the label.
+    // D365 Sales Process default mapping:
+    const STAGE_INT_ORDER = [0, 1, 2, 3]; // Qualify, Develop, Propose, Close
+    const STAGE_COLORS    = { 0: "#4f8eff", 1: "#a78bfa", 2: "#fbbf24", 3: "#34d399" };
+    const STAGE_FALLBACK  = { 0: "Qualify", 1: "Develop", 2: "Propose", 3: "Close" };
+    const EXTRA_COLORS    = ["#fb923c","#f87171","#38bdf8","#a3e635","#e879f9"];
+
+    // Bucket by integer stage value
+    const byStageInt = {};
+    data.forEach(r => {
+      const intVal = r.salesstage;           // numeric OptionSet value
+      if (intVal === null || intVal === undefined) return;
+      const label = r["salesstage@OData.Community.Display.V1.FormattedValue"]
+                 || STAGE_FALLBACK[intVal]
+                 || String(intVal);
+      if (!byStageInt[intVal]) byStageInt[intVal] = { label, count: 0, value: 0 };
+      byStageInt[intVal].count++;
+      byStageInt[intVal].value += parseFloat(r.estimatedvalue) || 0;
+    });
+
+    // Sort: known order first (0,1,2,3), then any extra integers ascending
+    const knownInts = STAGE_INT_ORDER.filter(i => byStageInt[i] !== undefined);
+    const extraInts = Object.keys(byStageInt).map(Number)
+                        .filter(i => !STAGE_INT_ORDER.includes(i))
+                        .sort((a,b) => a - b);
+    const orderedInts = [...knownInts, ...extraInts];
+
+    const stageData = orderedInts.map((intVal, idx) => ({
+      intVal,
+      label: byStageInt[intVal].label,
+      color: STAGE_COLORS[intVal] || EXTRA_COLORS[idx % EXTRA_COLORS.length],
+      count: byStageInt[intVal].count,
+      value: byStageInt[intVal].value,
+    }));
+
+    const maxStageVal = Math.max(...stageData.map(s => s.value), 1);
+
+    // Rebuild grid columns dynamically
+    const strip = document.getElementById("stage-strip");
+    strip.style.gridTemplateColumns = `repeat(${Math.max(stageData.length, 1)}, 1fr)`;
+    strip.innerHTML = stageData.length ? stageData.map(s => `
+      <div class="stage-step">
+        <div class="stage-num" style="color:${s.color}">
+          <div class="stage-dot" style="background:${s.color};box-shadow:0 0 6px ${s.color}66"></div>
+          ${esc(s.label)}
+        </div>
+        <div class="stage-count" style="color:${s.value > 0 ? 'var(--text)' : 'var(--text-faint)'}">${s.count}</div>
+        <div class="stage-value">${s.value > 0 ? fmtCur(s.value) : '—'}</div>
+        <div class="stage-bar-bg">
+          <div class="stage-bar-fill" style="width:${s.value > 0 ? Math.max(4, Math.round((s.value/maxStageVal)*100)) : 0}%;background:${s.color}"></div>
+        </div>
+      </div>`).join("")
+    : `<div class="stage-step" style="grid-column:1/-1"><div class="stage-num" style="color:var(--text-faint)">No stage data</div></div>`;
+
+    // ── Status donut — update in-place if chart already exists ──
+    const COLORS = ["#4f8eff", "#34d399", "#f87171", "#fbbf24", "#a78bfa"];
+    const statusMap = {};
+    data.forEach(r => {
+      const label = stateLabel(r.statecode);
+      if (!statusMap[label]) statusMap[label] = 0;
+      statusMap[label]++;
+    });
+    const sLabels = Object.keys(statusMap);
+    const sVals   = sLabels.map(l => statusMap[l]);
+
+    if (charts["chart-status"]) {
+      charts["chart-status"].data.labels = sLabels;
+      charts["chart-status"].data.datasets[0].data = sVals;
+      charts["chart-status"].update("active");
+    } else {
+      const ctx = document.getElementById("chart-status").getContext("2d");
+      charts["chart-status"] = new Chart(ctx, {
+        type: "doughnut",
+        data: { labels: sLabels, datasets: [{ data: sVals, backgroundColor: COLORS, borderWidth: 0, hoverOffset: 6 }] },
+        options: {
+          responsive: true, maintainAspectRatio: false, animation: { duration: 400 },
+          cutout: "62%",
+          plugins: {
+            legend: { position: "right", labels: { color: "var(--text-dim)", font: { size: 11 }, padding: 14, boxWidth: 10 } },
+            tooltip: { backgroundColor: "var(--card)", borderColor: "var(--border)", borderWidth: 1, titleColor: "var(--text)", bodyColor: "var(--text-dim)", padding: 10 }
+          }
+        }
+      });
+    }
+
+    // ── Close by month bar — update in-place if chart already exists ──
+    const byMonth = {};
+    open.forEach(r => {
+      if (!r.estimatedclosedate) return;
+      const mk = toMonthKey(r.estimatedclosedate);
+      if (!mk) return;
+      if (!byMonth[mk]) byMonth[mk] = 0;
+      byMonth[mk] += parseFloat(r.estimatedvalue) || 0;
+    });
+    const months = Object.keys(byMonth).sort();
+    const monthLabels = months.map(m => formatMonth(m));
+    const monthVals   = months.map(m => byMonth[m]);
+
+    if (charts["chart-close-month"]) {
+      charts["chart-close-month"].data.labels = monthLabels;
+      charts["chart-close-month"].data.datasets[0].data = monthVals;
+      charts["chart-close-month"].update("active");
+    } else {
+      const ctx2 = document.getElementById("chart-close-month").getContext("2d");
+      charts["chart-close-month"] = new Chart(ctx2, {
+        type: "bar",
+        data: {
+          labels: monthLabels,
+          datasets: [{
+            label: "Est. Value Closing",
+            data: monthVals,
+            backgroundColor: "rgba(79,142,255,0.65)",
+            borderColor: "#4f8eff",
+            borderWidth: 1,
+            borderRadius: 4,
+            hoverBackgroundColor: "rgba(79,142,255,0.9)"
+          }]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false, animation: { duration: 400 },
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              backgroundColor: "var(--card)", borderColor: "var(--border)", borderWidth: 1,
+              titleColor: "var(--text)", bodyColor: "var(--text-dim)", padding: 10,
+              callbacks: { label: ctx => "  " + fmtCur(ctx.parsed.y) }
+            }
+          },
+          scales: {
+            x: { grid: { color: "rgba(128,128,128,0.08)" }, ticks: { color: "var(--text-faint)", font: { size: 11 } } },
+            y: { grid: { color: "rgba(128,128,128,0.08)" }, ticks: { color: "var(--text-faint)", font: { size: 11 }, callback: v => fmtShort(v) } }
+          }
+        }
+      });
+    }
+
+    // ── Top 10 open opps table ──
+    const top10 = [...open].sort((a,b) => (parseFloat(b.estimatedvalue)||0) - (parseFloat(a.estimatedvalue)||0)).slice(0, 10);
+    document.getElementById("top-opps-wrap").innerHTML = renderOppTable(top10);
+  } // end _renderDashboardInner
+
+  function renderOppTable(rows) {
+    if (!rows.length) return '<div class="state-box"><span>No records found.</span></div>';
+    const rowsHtml = rows.map(r => {
+      const prob = parseFloat(r.closeprobability) || 0;
+      const owner = r["_ownerid_value@OData.Community.Display.V1.FormattedValue"] || r._ownerid_value || "—";
+      return `<tr>
+        <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(r.name)}">${esc(r.name || "—")}</td>
+        <td>${stageBadge(r)}</td>
+        <td class="mono text-right" style="color:var(--accent)">${fmtCur(r.estimatedvalue)}</td>
+        <td style="min-width:100px">
+          <div class="prob-wrap">
+            <div class="prob-bar-bg"><div class="prob-bar-fill" style="width:${prob}%;background:${prob>=70?'var(--accent3)':prob>=40?'var(--accent4)':'var(--accent5)'}"></div></div>
+            <span class="mono" style="font-size:11px;color:var(--text-dim)">${Math.round(prob)}%</span>
+          </div>
+        </td>
+        <td class="text-dim">${r.estimatedclosedate ? fmtDate(r.estimatedclosedate) : "—"}</td>
+        <td class="text-dim" style="max-width:140px;overflow:hidden;text-overflow:ellipsis" title="${esc(owner)}">${esc(owner)}</td>
+        <td>${statusBadge(r.statecode)}</td>
+        <td class="mono text-right text-dim">${fmtCur(r.totalamount)}</td>
+      </tr>`;
+    }).join("");
+    return `<table style="width:100%;border-collapse:collapse;font-size:12px;">
+      <thead>
+        <tr>
+          <th style="padding:10px 12px;text-align:left;font-size:10px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-faint);border-bottom:1px solid var(--border);white-space:nowrap;">Name</th>
+          <th style="padding:10px 12px;text-align:left;font-size:10px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-faint);border-bottom:1px solid var(--border);white-space:nowrap;">Stage</th>
+          <th style="padding:10px 12px;text-align:right;font-size:10px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-faint);border-bottom:1px solid var(--border);white-space:nowrap;">Est. Value</th>
+          <th style="padding:10px 12px;text-align:left;font-size:10px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-faint);border-bottom:1px solid var(--border);white-space:nowrap;">Probability</th>
+          <th style="padding:10px 12px;text-align:left;font-size:10px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-faint);border-bottom:1px solid var(--border);white-space:nowrap;">Close Date</th>
+          <th style="padding:10px 12px;text-align:left;font-size:10px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-faint);border-bottom:1px solid var(--border);white-space:nowrap;">Owner</th>
+          <th style="padding:10px 12px;text-align:left;font-size:10px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-faint);border-bottom:1px solid var(--border);white-space:nowrap;">Status</th>
+          <th style="padding:10px 12px;text-align:right;font-size:10px;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-faint);border-bottom:1px solid var(--border);white-space:nowrap;">Total Amt</th>
+        </tr>
+      </thead>
+      <tbody>${rowsHtml}</tbody>
+    </table>`;
+  }
+
+  // ── Side panel ──
+  let oppPanelData = [];
+  let oppSortKey = "estimatedvalue";
+  let oppSortAsc = false;
+  let oppFiltered = [];
+
+  function openOppPanel() {
+    const stage = document.getElementById("stage-filter").value;
+    const owner = document.getElementById("owner-filter").value;
+    const year  = document.getElementById("year-filter").value;
+
+    let data = rawData;
+    if (stage !== "") data = data.filter(r => r.salesstage === parseInt(stage));
+    if (owner) data = data.filter(r => {
+      const o = r["_ownerid_value@OData.Community.Display.V1.FormattedValue"] || r._ownerid_value || "";
+      return o === owner;
+    });
+    if (year) data = data.filter(r => r.estimatedclosedate && new Date(r.estimatedclosedate).getFullYear() === parseInt(year));
+
+    oppPanelData = data;
+    oppFiltered  = [...data];
+    document.getElementById("opp-panel-title").textContent = "All Opportunities";
+    document.getElementById("opp-panel-sub").textContent = `${data.length} records`;
+    document.getElementById("opp-search").value = "";
+    renderOppGrid();
+    document.getElementById("opp-overlay").style.display = "block";
+    setTimeout(() => document.getElementById("opp-panel").style.right = "0", 10);
+  }
+
+  function closeOppPanel() {
+    document.getElementById("opp-panel").style.right = "-760px";
+    document.getElementById("opp-overlay").style.display = "none";
+  }
+
+  function filterOppGrid() {
+    const q = document.getElementById("opp-search").value.toLowerCase();
+    oppFiltered = oppPanelData.filter(r =>
+      !q ||
+      (r.name || "").toLowerCase().includes(q) ||
+      (r.salesstage || "").toLowerCase().includes(q) ||
+      ((r["_ownerid_value@OData.Community.Display.V1.FormattedValue"] || r._ownerid_value) || "").toLowerCase().includes(q) ||
+      (r.description || "").toLowerCase().includes(q)
+    );
+    renderOppGrid();
+  }
+
+  function sortOpp(key) {
+    if (oppSortKey === key) oppSortAsc = !oppSortAsc;
+    else { oppSortKey = key; oppSortAsc = true; }
+    renderOppGrid();
+  }
+
+  function renderOppGrid() {
+    const sorted = [...oppFiltered].sort((a, b) => {
+      const av = a[oppSortKey] ?? "";
+      const bv = b[oppSortKey] ?? "";
+      if (!isNaN(parseFloat(av)) && !isNaN(parseFloat(bv))) {
+        return oppSortAsc ? parseFloat(av) - parseFloat(bv) : parseFloat(bv) - parseFloat(av);
+      }
+      return oppSortAsc ? String(av).localeCompare(String(bv)) : String(bv).localeCompare(String(av));
+    });
+
+    const rows = sorted.map(r => {
+      const prob  = parseFloat(r.closeprobability) || 0;
+      const owner = r["_ownerid_value@OData.Community.Display.V1.FormattedValue"] || r._ownerid_value || "—";
+      return `<tr>
+        <td style="max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text)" title="${esc(r.name)}">${esc(r.name || "—")}</td>
+        <td>${stageBadge(r)}</td>
+        <td class="mono text-right" style="color:var(--accent)">${fmtCur(r.estimatedvalue)}</td>
+        <td><div class="prob-wrap">
+          <div class="prob-bar-bg"><div class="prob-bar-fill" style="width:${prob}%;background:${prob>=70?'var(--accent3)':prob>=40?'var(--accent4)':'var(--accent5)'}"></div></div>
+          <span class="mono" style="font-size:11px;color:var(--text-dim)">${Math.round(prob)}%</span>
+        </div></td>
+        <td class="text-dim">${r.estimatedclosedate ? fmtDate(r.estimatedclosedate) : "—"}</td>
+        <td class="text-dim" style="max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(owner)}">${esc(owner)}</td>
+        <td>${statusBadge(r.statecode)}</td>
+        <td class="mono text-right text-dim">${fmtCur(r.totalamount)}</td>
+      </tr>`;
+    }).join("");
+
+    document.getElementById("opp-tbody").innerHTML = rows ||
+      '<tr><td colspan="8" style="padding:32px;text-align:center;color:var(--text-faint)">No records found</td></tr>';
+    document.getElementById("opp-count-label").textContent = `${sorted.length} opportunities`;
+  }
+
+  // ── Helpers ──
+  function setKpi(id, val, sub) {
+    document.getElementById(id).textContent = val;
+    const subEl = document.getElementById(id + "-sub");
+    if (subEl) subEl.textContent = sub;
+  }
+  function stateLabel(code) {
+    if (code === 0) return "Active";
+    if (code === 1) return "Won";
+    if (code === 2) return "Lost";
+    return "Other";
+  }
+  function getStageLabelFromRecord(r) {
+    return r["salesstage@OData.Community.Display.V1.FormattedValue"]
+        || { 0:"Qualify",1:"Develop",2:"Propose",3:"Close" }[r.salesstage]
+        || (r.salesstage !== null && r.salesstage !== undefined ? String(r.salesstage) : null);
+  }
+  function stageBadge(r) {
+    const stage = getStageLabelFromRecord(r);
+    if (!stage) return `<span class="badge badge-default">—</span>`;
+    const s = stage.toLowerCase();
+    let cls = "badge-default";
+    if (s.includes("qualify"))                          cls = "badge-qualify";
+    else if (s.includes("develop"))                     cls = "badge-develop";
+    else if (s.includes("propos") || s.includes("present")) cls = "badge-propose";
+    else if (s.includes("close") || s.includes("negot"))    cls = "badge-close";
+    else if (s.includes("won"))                         cls = "badge-won";
+    else if (s.includes("lost"))                        cls = "badge-lost";
+    return `<span class="badge ${cls}">${esc(stage)}</span>`;
+  }
+  function statusBadge(code) {
+    if (code === 0) return `<span class="badge badge-qualify">Active</span>`;
+    if (code === 1) return `<span class="badge badge-won">Won</span>`;
+    if (code === 2) return `<span class="badge badge-lost">Lost</span>`;
+    return `<span class="badge badge-default">—</span>`;
+  }
+  function fmtCur(n) {
+    const v = parseFloat(n);
+    if (isNaN(v) || !v) return "—";
+    return new Intl.NumberFormat("en", { style: "currency", currency: ORG_CURRENCY, maximumFractionDigits: 0 }).format(v);
+  }
+  function fmtShort(n) {
+    const v = parseFloat(n) || 0;
+    if (Math.abs(v) >= 1e9) return (v/1e9).toFixed(1) + "B";
+    if (Math.abs(v) >= 1e6) return (v/1e6).toFixed(1) + "M";
+    if (Math.abs(v) >= 1e3) return (v/1e3).toFixed(0) + "K";
+    return Math.round(v).toString();
+  }
+  function fmtDate(dt) {
+    if (!dt) return "";
+    const d = new Date(dt);
+    return d.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
+  }
+  function toMonthKey(dt) {
+    if (!dt) return null;
+    const d = new Date(dt);
+    if (isNaN(d)) return null;
+    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}`;
+  }
+  function formatMonth(mk) {
+    if (!mk) return "";
+    const [y, m] = mk.split("-");
+    return new Date(y, m-1).toLocaleString("default", { month: "short", year: "2-digit" });
+  }
+  function esc(v) {
+    if (!v) return "";
+    return String(v)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
+  }
+
+  // ── THEME SYSTEM ──
+  const THEMES = [
+    // ── DARK (5) ──
+    {
+      id: "dark-midnight", name: "Midnight", dark: true,
+      bg:"#0d0f14", surface:"#13161e", card:"#181b24", cardAlt:"#1e2230",
+      border:"rgba(255,255,255,0.07)", borderHi:"rgba(255,255,255,0.14)",
+      text:"#e8eaf0", textDim:"#8891a8", textFaint:"#4b5268",
+      accent:"#4f8eff", swatch:"#0d0f14", swatchAccent:"#4f8eff", label:"Midnight"
+    },
+    {
+      id: "dark-obsidian", name: "Obsidian", dark: true,
+      bg:"#0f0f0f", surface:"#171717", card:"#1c1c1c", cardAlt:"#242424",
+      border:"rgba(255,255,255,0.06)", borderHi:"rgba(255,255,255,0.12)",
+      text:"#f0f0f0", textDim:"#888888", textFaint:"#444444",
+      accent:"#e879f9", swatch:"#0f0f0f", swatchAccent:"#e879f9", label:"Obsidian"
+    },
+    {
+      id: "dark-forest", name: "Forest", dark: true,
+      bg:"#0a0f0d", surface:"#0f1610", card:"#131c14", cardAlt:"#192418",
+      border:"rgba(255,255,255,0.07)", borderHi:"rgba(255,255,255,0.13)",
+      text:"#dff0e4", textDim:"#7a9e85", textFaint:"#3d5c44",
+      accent:"#34d399", swatch:"#0a0f0d", swatchAccent:"#34d399", label:"Forest"
+    },
+    {
+      id: "dark-ember", name: "Ember", dark: true,
+      bg:"#100c09", surface:"#18120e", card:"#1e1710", cardAlt:"#261e16",
+      border:"rgba(255,255,255,0.07)", borderHi:"rgba(255,255,255,0.13)",
+      text:"#f0e8df", textDim:"#9e8878", textFaint:"#5c4a3d",
+      accent:"#fb923c", swatch:"#100c09", swatchAccent:"#fb923c", label:"Ember"
+    },
+    {
+      id: "dark-aurora", name: "Aurora", dark: true,
+      bg:"#08090f", surface:"#0d0f1a", card:"#121420", cardAlt:"#181b2a",
+      border:"rgba(255,255,255,0.07)", borderHi:"rgba(255,255,255,0.13)",
+      text:"#e4e8f8", textDim:"#7880a8", textFaint:"#3a4060",
+      accent:"#a78bfa", swatch:"#08090f", swatchAccent:"#a78bfa", label:"Aurora"
+    },
+
+    // ── LIGHT (5) ──
+    {
+      id: "light-cloud", name: "Cloud", dark: false,
+      bg:"#f4f6f9", surface:"#ffffff", card:"#ffffff", cardAlt:"#f0f2f5",
+      border:"rgba(0,0,0,0.08)", borderHi:"rgba(0,0,0,0.16)",
+      text:"#111827", textDim:"#6b7280", textFaint:"#9ca3af",
+      accent:"#2563eb", swatch:"#f4f6f9", swatchAccent:"#2563eb", label:"Cloud"
+    },
+    {
+      id: "light-rose", name: "Rose", dark: false,
+      bg:"#fdf4f6", surface:"#ffffff", card:"#ffffff", cardAlt:"#fce8ee",
+      border:"rgba(0,0,0,0.08)", borderHi:"rgba(0,0,0,0.15)",
+      text:"#1f0a10", textDim:"#8b4c5e", textFaint:"#c9879a",
+      accent:"#e11d48", swatch:"#fdf4f6", swatchAccent:"#e11d48", label:"Rose"
+    },
+    {
+      id: "light-sage", name: "Sage", dark: false,
+      bg:"#f2f7f4", surface:"#ffffff", card:"#ffffff", cardAlt:"#e8f2ec",
+      border:"rgba(0,0,0,0.08)", borderHi:"rgba(0,0,0,0.15)",
+      text:"#0d1f15", textDim:"#4d7a5e", textFaint:"#8fb09d",
+      accent:"#059669", swatch:"#f2f7f4", swatchAccent:"#059669", label:"Sage"
+    },
+    {
+      id: "light-sand", name: "Sand", dark: false,
+      bg:"#faf8f4", surface:"#ffffff", card:"#ffffff", cardAlt:"#f5f0e8",
+      border:"rgba(0,0,0,0.08)", borderHi:"rgba(0,0,0,0.15)",
+      text:"#1c1710", textDim:"#7a6e5e", textFaint:"#b0a898",
+      accent:"#d97706", swatch:"#faf8f4", swatchAccent:"#d97706", label:"Sand"
+    },
+    {
+      id: "light-slate", name: "Slate", dark: false,
+      bg:"#f1f3f6", surface:"#ffffff", card:"#ffffff", cardAlt:"#e8ecf1",
+      border:"rgba(0,0,0,0.08)", borderHi:"rgba(0,0,0,0.15)",
+      text:"#0f172a", textDim:"#64748b", textFaint:"#94a3b8",
+      accent:"#7c3aed", swatch:"#f1f3f6", swatchAccent:"#7c3aed", label:"Slate"
+    },
+  ];
+
+  let activeThemeId = "dark-midnight";
+
+  function applyTheme(id) {
+    const t = THEMES.find(x => x.id === id);
+    if (!t) return;
+    activeThemeId = id;
+    const r = document.documentElement.style;
+    r.setProperty("--bg",         t.bg);
+    r.setProperty("--surface",    t.surface);
+    r.setProperty("--card",       t.card);
+    r.setProperty("--card-alt",   t.cardAlt);
+    r.setProperty("--border",     t.border);
+    r.setProperty("--border-hi",  t.borderHi);
+    r.setProperty("--text",       t.text);
+    r.setProperty("--text-dim",   t.textDim);
+    r.setProperty("--text-faint", t.textFaint);
+    r.setProperty("--accent",     t.accent);
+
+    // Update dropdown chevron to match textDim color
+    const arrowColor = encodeURIComponent(t.textDim);
+    r.setProperty("--select-arrow",
+      `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='${arrowColor}'/%3E%3C/svg%3E")`
+    );
+
+    // Update chart tooltip colours if charts exist
+    Object.values(charts).forEach(c => {
+      if (!c.options?.plugins?.tooltip) return;
+      c.options.plugins.tooltip.backgroundColor = t.card;
+      c.options.plugins.tooltip.titleColor       = t.text;
+      c.options.plugins.tooltip.bodyColor        = t.textDim;
+      c.options.plugins.tooltip.borderColor      = t.border;
+      c.update();
+    });
+    // Mark active swatch
+    document.querySelectorAll(".theme-swatch").forEach(el => {
+      el.classList.toggle("active", el.dataset.theme === id);
+    });
+    // Persist
+    try { localStorage.setItem("opp_theme", id); } catch(e) {}
+  }
+
+  function buildThemeSwatches() {
+    const darkEl  = document.getElementById("dark-themes");
+    const lightEl = document.getElementById("light-themes");
+    THEMES.forEach(t => {
+      const div = document.createElement("div");
+      div.className = "theme-swatch" + (t.id === activeThemeId ? " active" : "");
+      div.dataset.theme = t.id;
+      div.title = t.name;
+      div.innerHTML = `
+        <div class="swatch-bg" style="background:${t.bg}">
+          <div style="width:60%;height:40%;background:${t.surface};border-radius:4px;border:1px solid ${t.border};display:flex;align-items:center;justify-content:center;gap:3px;padding:4px">
+            <div style="flex:1;height:100%;background:${t.cardAlt};border-radius:2px"></div>
+            <div style="flex:2;height:100%;background:${t.card};border-radius:2px"></div>
+          </div>
+        </div>
+        <div class="swatch-accent" style="background:${t.accent};color:#fff">${t.label}</div>
+        <div class="check">✓</div>`;
+      div.addEventListener("click", () => applyTheme(t.id));
+      (t.dark ? darkEl : lightEl).appendChild(div);
+    });
+  }
+
+  function openSettings() {
+    document.getElementById("settings-overlay").style.display = "block";
+    setTimeout(() => document.getElementById("settings-panel").style.right = "0", 10);
+  }
+  function closeSettings() {
+    document.getElementById("settings-panel").style.right = "-360px";
+    document.getElementById("settings-overlay").style.display = "none";
+  }
+
+  // Init on load
+  (function initTheme() {
+    let saved = "dark-midnight";
+    try { saved = localStorage.getItem("opp_theme") || saved; } catch(e) {}
+    buildThemeSwatches();
+    applyTheme(saved);
+  })();
+</script>
+</body>
+</html>
