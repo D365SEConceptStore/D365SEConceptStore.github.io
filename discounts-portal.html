@@ -103,7 +103,7 @@
   td { padding: 11px 14px; font-size: 13px; border-bottom: 1px solid var(--border); vertical-align: middle; }
   tr:last-child td { border-bottom: none; }
   tr:hover td { background: rgba(255,255,255,.02); }
-  .td-mono { font-family: var(--mono); font-size: 12px; }
+  .td-mono { font-family: var(--mono); font-size: 12px; white-space: nowrap; }
   .td-bold { font-weight: 600; }
   .td-muted { color: var(--muted); font-size: 11px; margin-top: 2px; }
   .td-right { text-align: right; }
@@ -385,7 +385,7 @@
   // ── STATUS HELPERS ─────────────────────────────────────────────
   function getDiscountStatus(r) {
     const today = new Date().toISOString().split("T")[0];
-    if (r.mserp_status === "200000001" || r.mserp_status === 200000001) return "disabled";
+    if (r.mserp_status === "200000000" || r.mserp_status === 200000000) return "disabled";
     const from = r.mserp_validfrom?.split("T")[0];
     const to   = r.mserp_validto?.split("T")[0];
     if (to && to < today) return "expired";
@@ -401,17 +401,19 @@
   };
 
   const TYPE_LABELS = {
-    "200000000": "Discount",
-    "200000001": "Quantity Discount",
-    "200000002": "Mix & Match",
+    "200000000": "Quantity Discount",
+    "200000001": "Mix & Match",
+    "200000002": "Simple Discount",
     "200000003": "Threshold",
+    "200000004": "Free Item",
   };
 
   const CONCURRENCY_LABELS = {
     "200000000": "Exclusive",
     "200000001": "Best Price",
     "200000002": "Compounded",
-    "200000004": "Least Expensive",
+    "200000003": "Always Apply",
+    "200000004": "Price Attribute Combination Rank",
   };
 
   const STATUS_VALUES = {
@@ -599,7 +601,9 @@
       const badge  = STATUS_BADGE[status];
       const typeLabel   = TYPE_LABELS[String(r.mserp_periodicdiscounttype)] ?? r.mserp_periodicdiscounttype ?? "—";
       const concurLabel = CONCURRENCY_LABELS[String(r.mserp_concurrencymode)] ?? r.mserp_concurrencymode ?? "—";
-      const pct = r.mserp_discountpercentvalue != null ? r.mserp_discountpercentvalue + "%" : "—";
+      const isPercentType = !["200000001","200000003","200000004"].includes(String(r.mserp_periodicdiscounttype));
+      const pct = (r.mserp_discountpercentvalue && r.mserp_discountpercentvalue !== 0 && isPercentType)
+        ? r.mserp_discountpercentvalue + "%" : "—";
       const toDate = fmtDate(r.mserp_validto);
       const isExpiringSoon = status === "active" && toDate !== "—" && toDate <= new Date(Date.now() + 7*86400000).toISOString().split("T")[0];
 
@@ -636,20 +640,19 @@
       ["Discount Code",       r.mserp_discountcode],
       ["Name",                r.mserp_name],
       ["Description",         r.mserp_description],
-      ["Type",                TYPE_LABELS[String(r.mserp_periodicdiscounttype)] || r.mserp_periodicdiscounttype],
+      ["Type",                TYPE_LABELS[String(r.mserp_periodicdiscounttype)] ?? String(r.mserp_periodicdiscounttype)],
       ["Status",              badge.label],
       ["Valid From",          fmtDate(r.mserp_validfrom)],
       ["Valid To",            fmtDate(r.mserp_validto)],
       ["Discount %",          r.mserp_discountpercentvalue != null ? r.mserp_discountpercentvalue + "%" : null],
       ["Currency",            r.mserp_currencycode],
-      ["Mix & Match Amount",  r.mserp_mixandmatchdiscountamount],
-      ["Mix & Match Type",    r.mserp_mixandmatchdiscounttype],
-      ["Offer Qty Limit",     r.mserp_offerquantitylimit],
-      ["Concurrency Mode",    CONCURRENCY_LABELS[String(r.mserp_concurrencymode)] || r.mserp_concurrencymode],
-      ["Pricing Priority",    r.mserp_pricingprioritynumber],
-      ["Code Required",       r.mserp_isdiscountcoderequired],
-      ["Print on Receipt",    r.mserp_printdescriptiononfiscalreceipt],
-      ["Processing Status",   r.mserp_processingstatus],
+      ["Mix & Match Amount",  r.mserp_mixandmatchdiscountamount > 0 ? r.mserp_mixandmatchdiscountamount : null],
+      ["Mix & Match Type",    ({"200000000":"Least Expensive Lines","200000001":"Specific Products","200000002":"Cheapest Product","200000003":"Cheapest Product (Qty)"})[String(r.mserp_mixandmatchdiscounttype)] ?? null],
+      ["Offer Qty Limit",     r.mserp_offerquantitylimit > 0 ? r.mserp_offerquantitylimit : null],
+      ["Concurrency Mode",    CONCURRENCY_LABELS[String(r.mserp_concurrencymode)] ?? String(r.mserp_concurrencymode)],
+      ["Pricing Priority",    r.mserp_pricingprioritynumber > 0 ? r.mserp_pricingprioritynumber : null],
+      ["Code Required",       r.mserp_isdiscountcoderequired === 200000001 || r.mserp_isdiscountcoderequired === "200000001" ? "Yes" : "No"],
+      ["Processing Status",   ({"200000000":"Not processed","200000001":"Processing","200000002":"Processed","200000003":"Error"})[String(r.mserp_processingstatus)] ?? String(r.mserp_processingstatus)],
       ["Company",             r.mserp_dataareaid],
       ["Record ID",           r.mserp_discountrecordid],
     ].filter(([, v]) => v != null && v !== "");
