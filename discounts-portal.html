@@ -385,7 +385,7 @@
   // ── STATUS HELPERS ─────────────────────────────────────────────
   function getDiscountStatus(r) {
     const today = new Date().toISOString().split("T")[0];
-    if (r.mserp_status === "1" || r.mserp_status === 1) return "disabled";
+    if (r.mserp_status === "200000001" || r.mserp_status === 200000001) return "disabled";
     const from = r.mserp_validfrom?.split("T")[0];
     const to   = r.mserp_validto?.split("T")[0];
     if (to && to < today) return "expired";
@@ -401,16 +401,22 @@
   };
 
   const TYPE_LABELS = {
-    "0": "Discount",
-    "1": "Quantity Discount",
-    "2": "Mix & Match",
-    "3": "Threshold",
+    "200000000": "Discount",
+    "200000001": "Quantity Discount",
+    "200000002": "Mix & Match",
+    "200000003": "Threshold",
   };
 
   const CONCURRENCY_LABELS = {
-    "0": "Exclusive",
-    "1": "Best Price",
-    "2": "Compounded",
+    "200000000": "Exclusive",
+    "200000001": "Best Price",
+    "200000002": "Compounded",
+    "200000004": "Least Expensive",
+  };
+
+  const STATUS_VALUES = {
+    "200000000": "enabled",
+    "200000001": "disabled",
   };
 
   // ── LOAD DATA ──────────────────────────────────────────────────
