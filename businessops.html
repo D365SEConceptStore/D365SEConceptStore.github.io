@@ -270,6 +270,77 @@
     .panel-body { flex: 1; overflow-y: auto; overflow-x: auto; }
     .panel-footer { padding: 12px 22px; border-top: 1px solid var(--border); font-size: 11px; color: var(--text-faint); font-family: var(--mono); flex-shrink: 0; }
 
+    /* ── TOAST ── */
+    #toast {
+      position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%) translateY(20px);
+      background: var(--accent3); color: #0a0f0d; font-size: 13px; font-weight: 600;
+      padding: 10px 22px; border-radius: 20px; z-index: 500; opacity: 0;
+      transition: opacity .3s, transform .3s; pointer-events: none; white-space: nowrap;
+    }
+    #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+    /* ── EDIT PANEL ── */
+    #edit-overlay {
+      display: none; position: fixed; inset: 0;
+      background: rgba(0,0,0,0.5); z-index: 200; backdrop-filter: blur(3px);
+    }
+    #edit-panel {
+      position: fixed; top: 0; right: -680px; width: 680px; height: 100vh;
+      background: var(--surface); border-left: 1px solid var(--border);
+      box-shadow: -16px 0 64px rgba(0,0,0,.4);
+      z-index: 202; display: flex; flex-direction: column;
+      transition: right 0.32s cubic-bezier(0.4,0,0.2,1);
+      overflow-y: auto;
+    }
+
+    /* ── CREATE OPPORTUNITY PANEL ── */
+    #create-overlay {
+      display: none; position: fixed; inset: 0;
+      background: rgba(0,0,0,0.5); z-index: 200; backdrop-filter: blur(3px);
+    }
+    #create-panel {
+      position: fixed; top: 0; right: -680px; width: 680px; height: 100vh;
+      background: var(--surface); border-left: 1px solid var(--border);
+      box-shadow: -16px 0 64px rgba(0,0,0,0.4);
+      z-index: 201; display: flex; flex-direction: column;
+      transition: right 0.32s cubic-bezier(0.4,0,0.2,1);
+      overflow-y: auto;
+    }
+    .create-body { padding: 24px; display: flex; flex-direction: column; gap: 20px; }
+    .create-section { display: flex; flex-direction: column; gap: 14px; }
+    .create-section-title {
+      font-size: 10px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase;
+      color: var(--text-faint); padding-bottom: 10px; border-bottom: 1px solid var(--border);
+    }
+    .create-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .create-grid.cols-1 { grid-template-columns: 1fr; }
+    .create-grid.cols-3 { grid-template-columns: 1fr 1fr 1fr; }
+    .cf { display: flex; flex-direction: column; gap: 5px; }
+    .cf.full { grid-column: 1/-1; }
+    .cf label { font-size: 10px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; color: var(--text-faint); }
+    .cf label .req { color: var(--accent5); margin-left: 2px; }
+    .cf input, .cf select, .cf textarea {
+      background: var(--card); border: 1px solid var(--border); color: var(--text);
+      font-family: var(--sans); font-size: 13px; padding: 9px 12px; border-radius: 8px;
+      outline: none; transition: border-color .15s; width: 100%;
+    }
+    .cf input:focus, .cf select:focus, .cf textarea:focus { border-color: var(--accent); background: rgba(79,142,255,.04); }
+    .cf input.err, .cf select.err { border-color: var(--accent5); }
+    .cf textarea { resize: vertical; min-height: 72px; line-height: 1.5; }
+    .cf select option { background: var(--card); }
+    .create-actions {
+      display: flex; align-items: center; gap: 10px; justify-content: flex-end;
+      padding: 18px 24px; border-top: 1px solid var(--border); flex-shrink: 0;
+      position: sticky; bottom: 0; background: var(--surface);
+    }
+    .create-result {
+      margin: 0 24px; padding: 12px 16px; border-radius: 10px; font-size: 12px;
+      line-height: 1.6; display: none;
+    }
+    .create-result.ok  { background: rgba(52,211,153,.08); border: 1px solid rgba(52,211,153,.25); color: var(--accent3); }
+    .create-result.err { background: rgba(248,113,113,.08); border: 1px solid rgba(248,113,113,.25); color: var(--accent5); }
+    .create-result .opp-id { font-family: var(--mono); font-size: 11px; display: block; margin-top: 4px; opacity: .7; }
+
     /* ── STAGE PIPELINE STRIP ── */
     .stage-strip {
       display: grid;
@@ -475,6 +546,7 @@
     </div>
     <button class="btn" onclick="loadData()" id="refresh-btn">↺ Refresh</button>
     <button class="btn" onclick="openOppPanel()">≡ All Opportunities</button>
+    <button class="btn btn-primary" onclick="openCreatePanel()">＋ New Opportunity</button>
   </div>
 
   <!-- KPIs -->
@@ -595,6 +667,226 @@
     </table>
   </div>
   <div class="panel-footer" id="opp-count-label"></div>
+</div>
+
+<!-- CREATE OVERLAY -->
+<div id="create-overlay" onclick="closeCreatePanel()"></div>
+
+<!-- CREATE PANEL -->
+<div id="create-panel">
+  <div class="panel-header">
+    <div>
+      <div class="panel-title">＋ New Opportunity</div>
+      <div class="panel-sub">POST → opportunities</div>
+    </div>
+    <button class="btn" onclick="closeCreatePanel()">✕ Close</button>
+  </div>
+
+  <div class="create-body">
+
+    <!-- Result banner -->
+    <div class="create-result" id="create-result"></div>
+
+    <!-- Identity -->
+    <div class="create-section">
+      <div class="create-section-title">Opportunity</div>
+      <div class="create-grid cols-1">
+        <div class="cf">
+          <label>Opportunity Name <span class="req">*</span></label>
+          <input type="text" id="c_name" placeholder="e.g. Acme Corp — Q2 Renewal" autocomplete="off"/>
+        </div>
+      </div>
+      <div class="create-grid">
+        <div class="cf">
+          <label>Customer Account <span style="font-size:10px;font-weight:400;text-transform:none;letter-spacing:0;opacity:.6">(type to search)</span></label>
+          <div style="position:relative">
+            <input type="text" id="c_account" placeholder="Search by account name…" autocomplete="off" oninput="searchAccounts(this.value)" style="padding-right:28px"/>
+            <span id="c_account_check" style="position:absolute;right:10px;top:50%;transform:translateY(-50%);color:var(--accent3);font-size:14px;display:none">✓</span>
+            <div id="account-suggestions" style="position:absolute;left:0;right:0;top:calc(100% + 4px);z-index:999"></div>
+          </div>
+          <input type="hidden" id="c_accountid"/>
+        </div>
+        <div class="cf">
+          <label>Estimated Value</label>
+          <input type="number" id="c_estimatedvalue" placeholder="0.00" min="0" step="0.01"/>
+        </div>
+        <div class="cf">
+          <label>Estimated Close Date</label>
+          <input type="date" id="c_estimatedclosedate"/>
+        </div>
+        <div class="cf">
+          <label>Close Probability (%)</label>
+          <input type="number" id="c_closeprobability" placeholder="50" min="0" max="100"/>
+        </div>
+      </div>
+    </div>
+
+    <!-- Stage & Status -->
+    <div class="create-section">
+      <div class="create-section-title">Stage &amp; Classification</div>
+      <div class="create-grid cols-3">
+        <div class="cf">
+          <label>Sales Stage</label>
+          <select id="c_salesstage">
+            <option value="">— select —</option>
+            <option value="Qualify">Qualify</option>
+            <option value="Develop">Develop</option>
+            <option value="Propose">Propose</option>
+            <option value="Close">Close</option>
+          </select>
+        </div>
+        <div class="cf">
+          <label>Priority</label>
+          <select id="c_prioritycode">
+            <option value="">— select —</option>
+            <option value="1">Default</option>
+            <option value="2">Low</option>
+            <option value="3">High</option>
+          </select>
+        </div>
+        <div class="cf">
+          <label>Rating</label>
+          <select id="c_opportunityratingcode">
+            <option value="">— select —</option>
+            <option value="1">Hot</option>
+            <option value="2">Warm</option>
+            <option value="3">Cold</option>
+          </select>
+        </div>
+        <div class="cf">
+          <label>Budget Amount</label>
+          <input type="number" id="c_budgetamount" placeholder="0.00" min="0" step="0.01"/>
+        </div>
+        <div class="cf">
+          <label>Decision Maker?</label>
+          <select id="c_decisionmaker">
+            <option value="">— select —</option>
+            <option value="true">Yes</option>
+            <option value="false">No</option>
+          </select>
+        </div>
+        <div class="cf">
+          <label>Confirm Interest?</label>
+          <select id="c_confirminterest">
+            <option value="">— select —</option>
+            <option value="true">Yes</option>
+            <option value="false">No</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <!-- Description -->
+    <div class="create-section">
+      <div class="create-section-title">Notes</div>
+      <div class="create-grid cols-1">
+        <div class="cf">
+          <label>Description</label>
+          <textarea id="c_description" placeholder="Additional context, notes, or background…"></textarea>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /create-body -->
+
+  <!-- Actions -->
+  <div class="create-actions">
+    <button class="btn" onclick="resetCreateForm()">↺ Reset</button>
+    <button class="btn btn-primary" id="create-submit-btn" onclick="submitOpportunity()">
+      <span id="create-submit-label">Create Opportunity</span>
+    </button>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div id="toast"></div>
+
+<!-- EDIT OVERLAY -->
+<div id="edit-overlay" onclick="closeEditPanel()"></div>
+
+<!-- EDIT PANEL -->
+<div id="edit-panel">
+  <div class="panel-header">
+    <div>
+      <div class="panel-title" id="edit-panel-title">Edit Opportunity</div>
+      <div class="panel-sub" id="edit-panel-sub"></div>
+    </div>
+    <button class="btn" onclick="closeEditPanel()">✕ Close</button>
+  </div>
+  <div class="create-body">
+    <div class="create-result" id="edit-result"></div>
+    <div class="create-section">
+      <div class="create-section-title">Opportunity</div>
+      <div class="create-grid cols-1">
+        <div class="cf"><label>Opportunity Name <span class="req">*</span></label>
+          <input type="text" id="e_name" autocomplete="off"/></div>
+      </div>
+      <div class="create-grid">
+        <div class="cf"><label>Estimated Value</label>
+          <input type="number" id="e_estimatedvalue" min="0" step="0.01"/></div>
+        <div class="cf"><label>Estimated Close Date</label>
+          <input type="date" id="e_estimatedclosedate"/></div>
+        <div class="cf"><label>Close Probability (%)</label>
+          <input type="number" id="e_closeprobability" min="0" max="100"/></div>
+        <div class="cf"><label>Budget Amount</label>
+          <input type="number" id="e_budgetamount" min="0" step="0.01"/></div>
+      </div>
+    </div>
+    <div class="create-section">
+      <div class="create-section-title">Stage &amp; Classification</div>
+      <div class="create-grid cols-3">
+        <div class="cf"><label>Sales Stage</label>
+          <select id="e_salesstage">
+            <option value="">— select —</option>
+            <option value="0">Qualify</option>
+            <option value="1">Develop</option>
+            <option value="2">Propose</option>
+            <option value="3">Close</option>
+          </select></div>
+        <div class="cf"><label>Priority</label>
+          <select id="e_prioritycode">
+            <option value="">— select —</option>
+            <option value="1">Default</option>
+            <option value="2">Low</option>
+            <option value="3">High</option>
+          </select></div>
+        <div class="cf"><label>Rating</label>
+          <select id="e_opportunityratingcode">
+            <option value="">— select —</option>
+            <option value="1">Hot</option>
+            <option value="2">Warm</option>
+            <option value="3">Cold</option>
+          </select></div>
+        <div class="cf"><label>Decision Maker?</label>
+          <select id="e_decisionmaker">
+            <option value="">— select —</option>
+            <option value="true">Yes</option>
+            <option value="false">No</option>
+          </select></div>
+        <div class="cf"><label>Confirm Interest?</label>
+          <select id="e_confirminterest">
+            <option value="">— select —</option>
+            <option value="true">Yes</option>
+            <option value="false">No</option>
+          </select></div>
+      </div>
+    </div>
+    <div class="create-section">
+      <div class="create-section-title">Notes</div>
+      <div class="create-grid cols-1">
+        <div class="cf"><label>Description</label>
+          <textarea id="e_description"></textarea></div>
+      </div>
+    </div>
+  </div>
+  <div class="create-actions">
+    <button class="btn" style="color:var(--accent5);border-color:var(--accent5)" id="edit-delete-btn" onclick="confirmDeleteCurrent()">🗑 Delete</button>
+    <div style="flex:1"></div>
+    <button class="btn" onclick="closeEditPanel()">Cancel</button>
+    <button class="btn btn-primary" id="edit-submit-btn" onclick="submitEdit()">
+      <span id="edit-submit-label">Save Changes</span>
+    </button>
+  </div>
 </div>
 
 <!-- SETTINGS OVERLAY -->
@@ -1157,8 +1449,9 @@
     const rows = sorted.map(r => {
       const prob  = parseFloat(r.closeprobability) || 0;
       const owner = r["_ownerid_value@OData.Community.Display.V1.FormattedValue"] || r._ownerid_value || "—";
+      const idx = oppFiltered.indexOf(r);
       return `<tr>
-        <td style="max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text)" title="${esc(r.name)}">${esc(r.name || "—")}</td>
+        <td style="max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text)" title="${esc(r.name)}">${esc(r.name || "—")}</td>
         <td>${stageBadge(r)}</td>
         <td class="mono text-right" style="color:var(--accent)">${fmtCur(r.estimatedvalue)}</td>
         <td><div class="prob-wrap">
@@ -1166,9 +1459,13 @@
           <span class="mono" style="font-size:11px;color:var(--text-dim)">${Math.round(prob)}%</span>
         </div></td>
         <td class="text-dim">${r.estimatedclosedate ? fmtDate(r.estimatedclosedate) : "—"}</td>
-        <td class="text-dim" style="max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(owner)}">${esc(owner)}</td>
+        <td class="text-dim" style="max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(owner)}">${esc(owner)}</td>
         <td>${statusBadge(r.statecode)}</td>
         <td class="mono text-right text-dim">${fmtCur(r.totalamount)}</td>
+        <td style="white-space:nowrap">
+          <button onclick="openEditPanel(${idx})" style="background:none;border:1px solid var(--border);color:var(--text-dim);border-radius:6px;padding:4px 9px;font-size:11px;cursor:pointer;font-family:var(--sans);transition:all .15s" onmouseover="this.style.borderColor='var(--accent)';this.style.color='var(--accent)'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--text-dim)'">Edit</button>
+          <button onclick="confirmDelete(${idx})" style="background:none;border:1px solid var(--border);color:var(--text-dim);border-radius:6px;padding:4px 9px;font-size:11px;cursor:pointer;font-family:var(--sans);transition:all .15s;margin-left:4px" onmouseover="this.style.borderColor='var(--accent5)';this.style.color='var(--accent5)'" onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--text-dim)'">Delete</button>
+        </td>
       </tr>`;
     }).join("");
 
@@ -1407,6 +1704,340 @@
     buildThemeSwatches();
     applyTheme(saved);
   })();
+
+  // ── TOAST ────────────────────────────────────────────────────
+  let _toastTimer = null;
+  function showToast(msg) {
+    const t = document.getElementById("toast");
+    t.textContent = msg;
+    t.classList.add("show");
+    clearTimeout(_toastTimer);
+    _toastTimer = setTimeout(() => t.classList.remove("show"), 3000);
+  }
+
+  // ── EDIT PANEL ───────────────────────────────────────────────
+  let _editIndex = null;
+
+  function openEditPanel(idx) {
+    _editIndex = idx;
+    const r = oppFiltered[idx];
+    if (!r) return;
+    document.getElementById("edit-panel-title").textContent = "Edit Opportunity";
+    document.getElementById("edit-panel-sub").textContent   = r.opportunityid || "";
+    // Populate fields
+    document.getElementById("e_name").value                 = r.name || "";
+    document.getElementById("e_estimatedvalue").value       = r.estimatedvalue != null ? r.estimatedvalue : "";
+    document.getElementById("e_estimatedclosedate").value   = r.estimatedclosedate ? r.estimatedclosedate.split("T")[0] : "";
+    document.getElementById("e_closeprobability").value     = r.closeprobability != null ? r.closeprobability : "";
+    document.getElementById("e_budgetamount").value         = r.budgetamount != null ? r.budgetamount : "";
+    document.getElementById("e_description").value         = r.description || "";
+    // Stage — match by integer value
+    setSelectByValue("e_salesstage", r.salesstage != null ? String(r.salesstage) : "");
+    setSelectByValue("e_prioritycode",            String(r.prioritycode ?? ""));
+    setSelectByValue("e_opportunityratingcode",   String(r.opportunityratingcode ?? ""));
+    setSelectByValue("e_decisionmaker",           r.decisionmaker != null ? String(r.decisionmaker) : "");
+    setSelectByValue("e_confirminterest",         r.confirminterest != null ? String(r.confirminterest) : "");
+    hideEditResult();
+    document.getElementById("edit-overlay").style.display = "block";
+    setTimeout(() => document.getElementById("edit-panel").style.right = "0", 10);
+  }
+
+  function closeEditPanel() {
+    document.getElementById("edit-panel").style.right = "-680px";
+    setTimeout(() => document.getElementById("edit-overlay").style.display = "none", 320);
+    _editIndex = null;
+  }
+
+  function setSelectByValue(id, val) {
+    const el = document.getElementById(id);
+    for (const opt of el.options) { if (opt.value === val) { el.value = val; return true; } }
+    el.selectedIndex = 0; return false;
+  }
+  function setSelectByLabel(id, label) {
+    const el = document.getElementById(id);
+    for (const opt of el.options) { if (opt.text.toLowerCase() === label.toLowerCase()) { el.value = opt.value; return true; } }
+    return false;
+  }
+
+  function showEditResult(type, html) {
+    const el = document.getElementById("edit-result");
+    el.className = `create-result ${type}`; el.innerHTML = html; el.style.display = "block";
+    el.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  }
+  function hideEditResult() { document.getElementById("edit-result").style.display = "none"; }
+
+  async function submitEdit() {
+    if (_editIndex === null) return;
+    const r = oppFiltered[_editIndex];
+    if (!r || !r.opportunityid) return;
+
+    const str = id => document.getElementById(id).value.trim();
+    const num = id => { const v = str(id); return v !== "" ? parseFloat(v) : undefined; };
+
+    const name = str("e_name");
+    if (!name) { document.getElementById("e_name").classList.add("err"); return; }
+    document.getElementById("e_name").classList.remove("err");
+
+    const payload = { name };
+    if (str("e_estimatedclosedate"))   payload.estimatedclosedate    = str("e_estimatedclosedate");
+    const ev = num("e_estimatedvalue");   if (ev !== undefined) payload.estimatedvalue   = ev;
+    const cp = num("e_closeprobability"); if (cp !== undefined) payload.closeprobability = cp;
+    const ba = num("e_budgetamount");     if (ba !== undefined) payload.budgetamount      = ba;
+    if (str("e_salesstage"))           payload.salesstage            = parseInt(str("e_salesstage"));
+    if (str("e_prioritycode"))         payload.prioritycode          = parseInt(str("e_prioritycode"));
+    if (str("e_opportunityratingcode")) payload.opportunityratingcode = parseInt(str("e_opportunityratingcode"));
+    if (str("e_description"))          payload.description           = str("e_description");
+    if (str("e_decisionmaker"))        payload.decisionmaker         = str("e_decisionmaker") === "true";
+    if (str("e_confirminterest"))      payload.confirminterest       = str("e_confirminterest") === "true";
+
+    const btn = document.getElementById("edit-submit-btn");
+    const lbl = document.getElementById("edit-submit-label");
+    btn.disabled = true; lbl.innerHTML = '<span class="spinner"></span> Saving…';
+    hideEditResult();
+
+    try {
+      const token = await getToken();
+      const res = await fetch(`${D365_URL}/api/data/v9.2/opportunities(${r.opportunityid})`, {
+        method: "PATCH",
+        headers: {
+          "Authorization": `Bearer ${token}`,
+          "Content-Type": "application/json",
+          "OData-MaxVersion": "4.0", "OData-Version": "4.0",
+          "If-Match": "*",
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (res.ok || res.status === 204) {
+        closeEditPanel();
+        showToast(`✓ Saved: ${name}`);
+        loadData();
+      } else {
+        const json = await res.json().catch(() => null);
+        showEditResult("err", `Error ${res.status}: ${json?.error?.message || res.statusText}`);
+      }
+    } catch(e) {
+      showEditResult("err", `Request failed: ${e.message}`);
+    } finally {
+      btn.disabled = false; lbl.textContent = "Save Changes";
+    }
+  }
+
+  // ── DELETE ───────────────────────────────────────────────────
+  function confirmDelete(idx) {
+    const r = oppFiltered[idx];
+    if (!r) return;
+    if (!confirm(`Delete "${r.name}"?
+
+This cannot be undone.`)) return;
+    deleteOpportunity(r.opportunityid, r.name);
+  }
+
+  function confirmDeleteCurrent() {
+    if (_editIndex === null) return;
+    const r = oppFiltered[_editIndex];
+    if (!r) return;
+    if (!confirm(`Delete "${r.name}"?
+
+This cannot be undone.`)) return;
+    closeEditPanel();
+    deleteOpportunity(r.opportunityid, r.name);
+  }
+
+  async function deleteOpportunity(id, name) {
+    try {
+      const token = await getToken();
+      const res = await fetch(`${D365_URL}/api/data/v9.2/opportunities(${id})`, {
+        method: "DELETE",
+        headers: {
+          "Authorization": `Bearer ${token}`,
+          "OData-MaxVersion": "4.0", "OData-Version": "4.0",
+        }
+      });
+      if (res.ok || res.status === 204) {
+        showToast(`🗑 Deleted: ${name}`);
+        loadData();
+      } else {
+        const json = await res.json().catch(() => null);
+        alert(`Delete failed (${res.status}): ${json?.error?.message || res.statusText}`);
+      }
+    } catch(e) {
+      alert(`Delete failed: ${e.message}`);
+    }
+  }
+
+  // ── CREATE PANEL ────────────────────────────────────────────
+  function openCreatePanel() {
+    document.getElementById("create-overlay").style.display = "block";
+    setTimeout(() => document.getElementById("create-panel").style.right = "0", 10);
+    // Default close date to 3 months from now
+    const d = new Date();
+    d.setMonth(d.getMonth() + 3);
+    document.getElementById("c_estimatedclosedate").value = d.toISOString().split("T")[0];
+    hideCreateResult();
+  }
+
+  function closeCreatePanel() {
+    document.getElementById("create-panel").style.right = "-680px";
+    setTimeout(() => document.getElementById("create-overlay").style.display = "none", 320);
+  }
+
+  function resetCreateForm() {
+    ["c_name","c_account","c_accountid","c_estimatedvalue","c_closeprobability","c_budgetamount","c_description"]
+      .forEach(id => { const el = document.getElementById(id); if (el) el.value = ""; });
+    ["c_salesstage","c_prioritycode","c_opportunityratingcode","c_decisionmaker","c_confirminterest"]
+      .forEach(id => { const el = document.getElementById(id); if (el) el.selectedIndex = 0; });
+    document.querySelectorAll("#create-panel .err").forEach(el => el.classList.remove("err"));
+    document.getElementById("account-suggestions").innerHTML = "";
+    hideCreateResult();
+    // Reset close date
+    const d = new Date(); d.setMonth(d.getMonth() + 3);
+    document.getElementById("c_estimatedclosedate").value = d.toISOString().split("T")[0];
+  }
+
+  function showCreateResult(type, html) {
+    const el = document.getElementById("create-result");
+    el.className = `create-result ${type}`;
+    el.innerHTML = html;
+    el.style.display = "block";
+    el.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  }
+  function hideCreateResult() { document.getElementById("create-result").style.display = "none"; }
+
+  // ── Account typeahead ──
+  let accountSearchTimer = null;
+  async function searchAccounts(q) {
+    // Clear selected account when user types again
+    document.getElementById("c_accountid").value = "";
+    document.getElementById("c_account_check").style.display = "none";
+    clearTimeout(accountSearchTimer);
+    const sug = document.getElementById("account-suggestions");
+    if (!q || q.length < 2) { sug.innerHTML = ""; return; }
+    accountSearchTimer = setTimeout(async () => {
+      try {
+        const token = await getToken();
+        const filter = encodeURIComponent(`contains(name,'${q.replace(/'/g,"''")}') and statecode eq 0`);
+        const res = await fetch(
+          `${D365_URL}/api/data/v9.2/accounts?$select=accountid,name&$filter=${filter}&$top=8`,
+          { headers: { "Authorization": `Bearer ${token}`, "Accept": "application/json", "OData-MaxVersion": "4.0", "OData-Version": "4.0" } }
+        );
+        if (!res.ok) { sug.innerHTML = ""; return; }
+        const json = await res.json();
+        const items = json.value || [];
+        if (!items.length) {
+          sug.innerHTML = `<div style="background:var(--card);border:1px solid var(--border);border-radius:8px;padding:10px 14px;font-size:12px;color:var(--text-faint)">No accounts found</div>`;
+          return;
+        }
+        sug.innerHTML = `<div style="background:var(--card);border:1px solid var(--border);border-radius:8px;overflow:hidden;box-shadow:0 8px 24px rgba(0,0,0,.5)">
+          ${items.map(a => `
+            <div onclick="selectAccount('${a.accountid}','${a.name.replace(/'/g,"&#39;")}')"
+              style="padding:9px 14px;cursor:pointer;transition:background .12s;border-bottom:1px solid var(--border)"
+              onmouseover="this.style.background='var(--card-alt)'" onmouseout="this.style.background=''">
+              <div style="font-size:13px;font-weight:500;color:var(--text)">${esc(a.name)}</div>
+            </div>`).join("")}
+        </div>`;
+      } catch(e) { console.warn("Account search error:", e); }
+    }, 280);
+  }
+
+  function selectAccount(id, name) {
+    document.getElementById("c_account").value = name;
+    document.getElementById("c_accountid").value = id;
+    document.getElementById("c_account_check").style.display = "inline";
+    document.getElementById("account-suggestions").innerHTML = "";
+  }
+
+  // Close suggestions when clicking outside
+  document.addEventListener("click", e => {
+    if (!e.target.closest("#c_account") && !e.target.closest("#account-suggestions")) {
+      const sug = document.getElementById("account-suggestions");
+      if (sug) sug.innerHTML = "";
+    }
+  });
+
+  // ── Validate ──
+  function validateCreate() {
+    let ok = true;
+    const required = ["c_name"];
+    required.forEach(id => {
+      const el = document.getElementById(id);
+      if (!el.value.trim()) { el.classList.add("err"); ok = false; }
+      else el.classList.remove("err");
+    });
+    // Also need close date
+    const cd = document.getElementById("c_estimatedclosedate");
+    if (!cd.value) { cd.classList.add("err"); ok = false; } else cd.classList.remove("err");
+    return ok;
+  }
+
+  // ── Submit ──
+  async function submitOpportunity() {
+    if (!validateCreate()) { showCreateResult("err", "Please fill in all required fields."); return; }
+
+    const str = id => document.getElementById(id).value.trim();
+    const num = id => { const v = str(id); return v !== "" ? parseFloat(v) : null; };
+
+    const payload = {};
+    if (str("c_name"))                payload.name                    = str("c_name");
+    if (str("c_estimatedclosedate"))  payload.estimatedclosedate      = str("c_estimatedclosedate");
+    if (str("c_salesstage"))          payload.salesstage              = parseInt(str("c_salesstage"));
+    if (num("c_estimatedvalue") !== null) payload.estimatedvalue      = num("c_estimatedvalue");
+    if (num("c_closeprobability") !== null) payload.closeprobability  = num("c_closeprobability");
+    if (num("c_budgetamount") !== null) payload.budgetamount          = num("c_budgetamount");
+    if (str("c_prioritycode"))        payload.prioritycode            = parseInt(str("c_prioritycode"));
+    if (str("c_opportunityratingcode")) payload.opportunityratingcode = parseInt(str("c_opportunityratingcode"));
+    if (str("c_description"))         payload.description             = str("c_description");
+    if (str("c_decisionmaker"))       payload.decisionmaker           = str("c_decisionmaker") === "true";
+    if (str("c_confirminterest"))     payload.confirminterest         = str("c_confirminterest") === "true";
+    // Link account if selected
+    const accountId = str("c_accountid");
+    if (accountId) payload["customerid_account@odata.bind"] = `/accounts(${accountId})`;
+
+    const btn = document.getElementById("create-submit-btn");
+    const lbl = document.getElementById("create-submit-label");
+    btn.disabled = true;
+    lbl.innerHTML = '<span class="spinner"></span> Creating…';
+    hideCreateResult();
+
+    try {
+      const token = await getToken();
+      const res = await fetch(`${D365_URL}/api/data/v9.2/opportunities`, {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${token}`,
+          "Content-Type": "application/json",
+          "OData-MaxVersion": "4.0",
+          "OData-Version": "4.0",
+          "Accept": "application/json",
+          "Prefer": "return=representation",
+        },
+        body: JSON.stringify(payload),
+      });
+
+      const text = await res.text();
+      let json = null;
+      try { json = JSON.parse(text); } catch {}
+
+      if (res.ok || res.status === 201) {
+        const oppId   = json?.opportunityid || "";
+        const oppName = json?.name || str("c_name");
+        resetCreateForm();
+        closeCreatePanel();
+        loadData();
+        // Brief toast on the main dashboard
+        showToast(`✓ Created: ${oppName}`);
+      } else {
+        const msg = json?.error?.message || text || `HTTP ${res.status}`;
+        showCreateResult("err", `Error ${res.status}: ${msg}`);
+      }
+    } catch(e) {
+      showCreateResult("err", `Request failed: ${e.message}`);
+    } finally {
+      btn.disabled = false;
+      lbl.textContent = "Create Opportunity";
+    }
+  }
+
 </script>
 </body>
 </html>
