@@ -321,12 +321,14 @@
   // ── MSAL INIT ──────────────────────────────────────────────────
   msalInstance.initialize().then(() => {
     msalReady = true;
-    msalInstance.handleRedirectPromise().then(resp => {
-      if (resp) setAccount(resp.account);
+    return msalInstance.handleRedirectPromise();
+  }).then(resp => {
+    if (resp) setAccount(resp.account);
+    else {
       const accs = msalInstance.getAllAccounts();
       if (accs.length > 0) setAccount(accs[0]);
-    }).catch(e => console.error(e));
-  });
+    }
+  }).catch(console.error);
 
   function setAccount(acc) {
     currentAccount = acc;
@@ -338,9 +340,9 @@
     loadData();
   }
 
-  async function signIn() {
-    try { await msalInstance.loginRedirect(loginRequest); }
-    catch(e) { console.error(e); alert("Login failed: " + e.message); }
+  function signIn() {
+    if (!msalReady) { alert("Still initializing…"); return; }
+    msalInstance.loginRedirect(loginRequest);
   }
 
   function signOut() {
