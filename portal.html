@@ -341,6 +341,7 @@ header {
     <button class="nt"        data-key="explorer"    onclick="openApp('explorer')"><span class="nt-icon">🔍</span> Explorer</button>
     <button class="nt"        data-key="po"          onclick="openApp('po')"><span class="nt-icon">📦</span> Purchase Orders</button>
     <button class="nt"        data-key="discounts"   onclick="openApp('discounts')"><span class="nt-icon">🏷️</span> Discounts</button>
+    <button class="nt"        data-key="so"          onclick="openApp('so')"><span class="nt-icon">🛒</span> Sales Orders</button>
   </nav>
 
   <div class="h-right">
@@ -416,6 +417,16 @@ header {
         <div class="ac-desc">Browse POs by status and vendor with full line-item drill-down and delivery tracking.</div>
         <div class="ac-footer">
           <span class="ac-meta">purchase orders · D365 F&amp;O</span>
+          <span class="ac-arrow">→</span>
+        </div>
+      </div>
+
+      <div class="app-card" style="--c:#3b82f6" onclick="openApp('so')">
+        <div class="ac-icon" style="background:rgba(59,130,246,.1);border:1px solid rgba(59,130,246,.2)">🛒</div>
+        <div class="ac-name">Sales Orders</div>
+        <div class="ac-desc">Browse sales orders by customer and status — drill into order lines, delivery dates and line-level pricing.</div>
+        <div class="ac-footer">
+          <span class="ac-meta">sales orders · D365 F&amp;O</span>
           <span class="ac-arrow">→</span>
         </div>
       </div>
@@ -505,6 +516,7 @@ const APPS = {
   explorer:    { name:"D365 Explorer",        src:"d365-explorer-virtent.html",  icon:"🔍", meta:"all entities · D365 OData"          },
   po:          { name:"Purchase Orders",      src:"po-portal.html",              icon:"📦", meta:"purchase orders · D365 F&O"         },
   discounts:   { name:"Periodic Discounts",   src:"discounts-portal.html",       icon:"🏷️", meta:"retail discounts · D365 F&O"         },
+  so:          { name:"Sales Orders",          src:"so-portal.html",               icon:"🛒", meta:"sales orders · D365 F&O"             },
 };
 // ═══════════════════════════════════════════════════════════════════
 
