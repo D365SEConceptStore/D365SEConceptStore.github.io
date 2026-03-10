@@ -195,7 +195,7 @@
       <div class="page-sub" id="data-range-label">—</div>
     </div>
     <div class="search-wrap">
-      <input type="text" class="search-input" id="search-input" placeholder="Search code, name, description…" oninput="applyFilters()" autocomplete="off"/>
+      <input type="text" class="search-input" id="search-input" placeholder="Search offer ID, code, name, description…" oninput="applyFilters()" autocomplete="off"/>
     </div>
     <select id="type-filter" onchange="applyFilters()">
       <option value="">All types</option>
@@ -256,6 +256,7 @@
         <thead>
           <tr>
             <th onclick="sortTable('mserp_discountcode')">Code ↕</th>
+            <th onclick="sortTable('mserp_offerid')">Offer ID ↕</th>
             <th onclick="sortTable('mserp_name')">Name ↕</th>
             <th onclick="sortTable('mserp_periodicdiscounttype')">Type ↕</th>
             <th onclick="sortTable('mserp_status')">Status ↕</th>
@@ -267,7 +268,7 @@
           </tr>
         </thead>
         <tbody id="disc-tbody">
-          <tr><td colspan="9"><div class="state-box"><div class="loading-spinner"></div>Loading…</div></td></tr>
+          <tr><td colspan="10"><div class="state-box"><div class="loading-spinner"></div>Loading…</div></td></tr>
         </tbody>
       </table>
       <div class="pagination" id="pagination"></div>
@@ -364,7 +365,7 @@
   // ── UI HELPERS ─────────────────────────────────────────────────
   function showLoading() {
     document.getElementById("disc-tbody").innerHTML =
-      '<tr><td colspan="9"><div class="state-box"><div class="loading-spinner"></div><div id="loading-msg">Loading…</div></div></td></tr>';
+      '<tr><td colspan="10"><div class="state-box"><div class="loading-spinner"></div><div id="loading-msg">Loading…</div></div></td></tr>';
   }
   function updateLoadingMsg(msg) {
     const el = document.getElementById("loading-msg");
@@ -372,7 +373,7 @@
   }
   function showError(msg) {
     document.getElementById("disc-tbody").innerHTML =
-      `<tr><td colspan="9"><div class="state-box" style="color:var(--red)">⚠ ${esc(msg)}</div></td></tr>`;
+      `<tr><td colspan="10"><div class="state-box" style="color:var(--red)">⚠ ${esc(msg)}</div></td></tr>`;
   }
   function esc(s) {
     return String(s ?? "").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;");
@@ -430,6 +431,8 @@
     try {
       const fields = [
         "mserp_discountcode",
+        "mserp_offerid",
+        "mserp_barcode",
         "mserp_name",
         "mserp_description",
         "mserp_status",
@@ -538,6 +541,8 @@
       if (q) {
         const hay = [
           r.mserp_discountcode,
+          r.mserp_offerid,
+          r.mserp_barcode,
           r.mserp_name,
           r.mserp_description,
           r.mserp_dataareaid,
@@ -589,7 +594,7 @@
 
     if (sorted.length === 0) {
       document.getElementById("disc-tbody").innerHTML =
-        '<tr><td colspan="9"><div class="state-box">No discounts match current filters</div></td></tr>';
+        '<tr><td colspan="10"><div class="state-box">No discounts match current filters</div></td></tr>';
       document.getElementById("pagination").textContent = "";
       return;
     }
@@ -609,6 +614,7 @@
 
       return `<tr style="cursor:pointer" onclick="openPanel(${JSON.stringify(r).replace(/"/g,'&quot;')})">
         <td class="td-mono td-bold" style="color:var(--accent)">${esc(r.mserp_discountcode || "—")}</td>
+        <td class="td-mono" style="color:var(--blue)">${esc(r.mserp_offerid || "—")}</td>
         <td>
           <div class="td-bold">${esc(r.mserp_name || "—")}</div>
           ${r.mserp_description ? `<div class="td-muted">${esc(r.mserp_description)}</div>` : ""}
@@ -631,13 +637,15 @@
   function openPanel(r) {
     const status = getDiscountStatus(r);
     const badge  = STATUS_BADGE[status];
-    document.getElementById("panel-disc-id").textContent   = r.mserp_discountcode || "—";
+    document.getElementById("panel-disc-id").textContent   = r.mserp_offerid || r.mserp_discountcode || "—";
     document.getElementById("panel-disc-name").textContent = r.mserp_name || "—";
     document.getElementById("panel-disc-meta").textContent =
       `${TYPE_LABELS[String(r.mserp_periodicdiscounttype)] || "—"} · ${r.mserp_dataareaid || "—"} · ${badge.label}`;
 
     const fields = [
       ["Discount Code",       r.mserp_discountcode],
+      ["Offer ID",            r.mserp_offerid],
+      ["Barcode",             r.mserp_barcode],
       ["Name",                r.mserp_name],
       ["Description",         r.mserp_description],
       ["Type",                TYPE_LABELS[String(r.mserp_periodicdiscounttype)] ?? String(r.mserp_periodicdiscounttype)],
