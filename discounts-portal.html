@@ -323,11 +323,10 @@
     msalReady = true;
     return msalInstance.handleRedirectPromise();
   }).then(resp => {
-    if (resp) setAccount(resp.account);
-    else {
-      const accs = msalInstance.getAllAccounts();
-      if (accs.length > 0) setAccount(accs[0]);
-    }
+    if (resp) { setAccount(resp.account); return; }
+    const accs = msalInstance.getAllAccounts();
+    if (accs.length > 0) { setAccount(accs[0]); return; }
+
   }).catch(console.error);
 
   function setAccount(acc) {
@@ -592,8 +591,8 @@
     const rows = sorted.map(r => {
       const status = getDiscountStatus(r);
       const badge  = STATUS_BADGE[status];
-      const typeLabel   = TYPE_LABELS[String(r.mserp_periodicdiscounttype)] || r.mserp_periodicdiscounttype ?? "—";
-      const concurLabel = CONCURRENCY_LABELS[String(r.mserp_concurrencymode)] || r.mserp_concurrencymode ?? "—";
+      const typeLabel   = TYPE_LABELS[String(r.mserp_periodicdiscounttype)] ?? r.mserp_periodicdiscounttype ?? "—";
+      const concurLabel = CONCURRENCY_LABELS[String(r.mserp_concurrencymode)] ?? r.mserp_concurrencymode ?? "—";
       const pct = r.mserp_discountpercentvalue != null ? r.mserp_discountpercentvalue + "%" : "—";
       const toDate = fmtDate(r.mserp_validto);
       const isExpiringSoon = status === "active" && toDate !== "—" && toDate <= new Date(Date.now() + 7*86400000).toISOString().split("T")[0];
