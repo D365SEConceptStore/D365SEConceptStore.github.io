@@ -582,6 +582,7 @@ window.addEventListener("message", (event) => {
   // Only accept messages from same origin
   if (event.origin !== location.origin) return;
   if (event.data?.type === "OPS_PORTAL_SIGNOUT") signOut();
+  if (event.data?.type === "OPS_PORTAL_SIGNIN") signIn();
 });
 
 // ── VIEWS ─────────────────────────────────────────────────────────
