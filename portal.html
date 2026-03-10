@@ -340,6 +340,7 @@ header {
     <button class="nt"        data-key="sales"       onclick="openApp('sales')"><span class="nt-icon">📊</span> Sales</button>
     <button class="nt"        data-key="explorer"    onclick="openApp('explorer')"><span class="nt-icon">🔍</span> Explorer</button>
     <button class="nt"        data-key="po"          onclick="openApp('po')"><span class="nt-icon">📦</span> Purchase Orders</button>
+    <button class="nt"        data-key="discounts"   onclick="openApp('discounts')"><span class="nt-icon">🏷️</span> Discounts</button>
   </nav>
 
   <div class="h-right">
@@ -419,6 +420,16 @@ header {
         </div>
       </div>
 
+      <div class="app-card" style="--c:#f472b6" onclick="openApp('discounts')">
+        <div class="ac-icon" style="background:rgba(244,114,182,.1);border:1px solid rgba(244,114,182,.2)">🏷️</div>
+        <div class="ac-name">Periodic Discounts</div>
+        <div class="ac-desc">View all active, upcoming and expired discount configurations — type, validity, concurrency and priority.</div>
+        <div class="ac-footer">
+          <span class="ac-meta">retail discounts · D365 F&amp;O</span>
+          <span class="ac-arrow">→</span>
+        </div>
+      </div>
+
     </div>
   </div>
 
@@ -493,6 +504,7 @@ const APPS = {
   sales:       { name:"Sales Dashboard",      src:"d365-dashboard.html",         icon:"📊", meta:"retail transactions · D365 F&O"    },
   explorer:    { name:"D365 Explorer",        src:"d365-explorer-virtent.html",  icon:"🔍", meta:"all entities · D365 OData"          },
   po:          { name:"Purchase Orders",      src:"po-portal.html",              icon:"📦", meta:"purchase orders · D365 F&O"         },
+  discounts:   { name:"Periodic Discounts",   src:"discounts-portal.html",       icon:"🏷️", meta:"retail discounts · D365 F&O"         },
 };
 // ═══════════════════════════════════════════════════════════════════
 

@@ -1,0 +1,669 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Periodic Discounts</title>
+<script src="https://alcdn.msauth.net/browser/2.35.0/js/msal-browser.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<style>
+  :root {
+    --bg: #1a1c1e; --surface: #23262a; --card: #23262a; --border: #2e3236;
+    --accent: #f59e0b; --accent-light: rgba(245,158,11,0.10);
+    --green: #22c55e; --amber: #f59e0b; --red: #ef4444; --purple: #a78bfa; --blue: #4f8eff;
+    --text: #f0f2f4; --text-dim: #9ca3af; --text-faint: #6b7280; --muted: #6b7280;
+    --mono: 'DM Mono', monospace; --sans: 'DM Sans', sans-serif;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: var(--sans); min-height: 100vh; }
+  ::selection { background: var(--accent); color: #000; }
+
+  header {
+    background: var(--surface); border-bottom: 1px solid var(--border);
+    padding: 0 32px; height: 58px; display: flex; align-items: center;
+    justify-content: space-between; position: sticky; top: 0; z-index: 100;
+  }
+  .logo { display: flex; align-items: center; gap: 10px; font-size: 14px; font-weight: 700; letter-spacing: -0.01em; }
+  .logo-icon { width: 28px; height: 28px; background: var(--accent); border-radius: 7px; display: flex; align-items: center; justify-content: center; font-size: 14px; }
+  .header-right { display: flex; align-items: center; gap: 16px; }
+  .account-pill { font-size: 11px; font-family: var(--mono); color: var(--green); background: rgba(34,197,94,.08); border: 1px solid rgba(34,197,94,.2); padding: 4px 10px; border-radius: 20px; }
+  .btn { padding: 7px 14px; border-radius: 8px; font-size: 13px; font-weight: 500; cursor: pointer; border: 1px solid var(--border); font-family: var(--sans); transition: all .15s; }
+  .btn-ghost { background: transparent; color: var(--text-dim); }
+  .btn-ghost:hover { border-color: var(--accent); color: var(--accent); }
+  .btn-sm { padding: 5px 11px; font-size: 12px; }
+  .btn-signout { background: transparent; color: var(--text-dim); border: 1px solid var(--border); }
+  .btn-signout:hover { border-color: #ef4444; color: #ef4444; }
+
+  .breadcrumb { padding: 10px 32px; font-size: 12px; color: var(--muted); display: flex; align-items: center; gap: 6px; border-bottom: 1px solid var(--border); background: var(--surface); }
+  .breadcrumb span { color: var(--text-dim); }
+
+  .toolbar {
+    padding: 16px 32px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+    border-bottom: 1px solid var(--border);
+  }
+  .page-title { font-size: 20px; font-weight: 700; letter-spacing: -0.02em; }
+  .page-sub { font-size: 12px; color: var(--muted); font-family: var(--mono); margin-top: 2px; }
+  .toolbar-left { flex: 1; }
+  .search-wrap { position: relative; }
+  .search-wrap::before { content: '🔍'; position: absolute; left: 10px; top: 50%; transform: translateY(-50%); font-size: 12px; pointer-events: none; }
+  .search-input {
+    background: var(--card); border: 1px solid var(--border); border-radius: 8px;
+    padding: 8px 12px 8px 30px; font-size: 13px; color: var(--text); font-family: var(--sans);
+    width: 280px; outline: none; transition: border-color .15s;
+  }
+  .search-input:focus { border-color: var(--accent); }
+  select {
+    background: var(--card); border: 1px solid var(--border); border-radius: 8px;
+    padding: 8px 12px; font-size: 13px; color: var(--text); font-family: var(--sans);
+    outline: none; cursor: pointer; transition: border-color .15s;
+  }
+  select:focus { border-color: var(--accent); }
+  select option { background: var(--card); }
+
+  /* Status pills */
+  .pills { padding: 0 32px 14px; display: flex; gap: 8px; flex-wrap: wrap; }
+  .sf-pill {
+    padding: 5px 14px; border-radius: 20px; font-size: 12px; font-weight: 500;
+    cursor: pointer; border: 1px solid var(--border); background: var(--card);
+    color: var(--text-dim); transition: all .15s;
+  }
+  .sf-pill:hover { border-color: var(--accent); color: var(--accent); }
+  .sf-pill.active { background: var(--accent); border-color: var(--accent); color: #000; font-weight: 600; }
+
+  /* KPI cards */
+  .kpi-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; padding: 0 32px 24px; }
+  .kpi-card {
+    background: var(--card); border: 1px solid var(--border); border-radius: 12px;
+    padding: 18px 20px; position: relative; overflow: hidden;
+  }
+  .kpi-card::after { content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 2px; }
+  .kpi-card.c0::after { background: var(--purple); }
+  .kpi-card.c1::after { background: var(--green); }
+  .kpi-card.c2::after { background: var(--amber); }
+  .kpi-card.c3::after { background: var(--red); }
+  .kpi-label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); margin-bottom: 8px; }
+  .kpi-value { font-family: var(--mono); font-size: 28px; font-weight: 500; color: var(--text); letter-spacing: -0.02em; line-height: 1; }
+  .kpi-sub { font-size: 12px; color: var(--muted); margin-top: 6px; }
+  .kpi-icon { position: absolute; right: 16px; top: 16px; font-size: 20px; opacity: 0.12; }
+
+  /* Table */
+  .table-section { padding: 0 32px 32px; }
+  .table-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+  .card-title { font-size: 14px; font-weight: 600; }
+  .card-count { font-size: 12px; color: var(--muted); font-family: var(--mono); margin-left: 8px; }
+  .table-wrap { border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+  table { width: 100%; border-collapse: collapse; }
+  thead { background: var(--surface); }
+  th {
+    padding: 11px 14px; text-align: left; font-size: 11px; font-weight: 600;
+    text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted);
+    border-bottom: 1px solid var(--border); white-space: nowrap; cursor: pointer; user-select: none;
+  }
+  th:hover { color: var(--accent); }
+  td { padding: 11px 14px; font-size: 13px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: rgba(255,255,255,.02); }
+  .td-mono { font-family: var(--mono); font-size: 12px; }
+  .td-bold { font-weight: 600; }
+  .td-muted { color: var(--muted); font-size: 11px; margin-top: 2px; }
+  .td-right { text-align: right; }
+  .pagination { padding: 12px 14px; font-size: 12px; color: var(--muted); border-top: 1px solid var(--border); background: var(--surface); }
+
+  /* Badges */
+  .badge { display: inline-flex; align-items: center; padding: 3px 8px; border-radius: 5px; font-size: 11px; font-weight: 600; white-space: nowrap; }
+  .badge-active   { background: rgba(34,197,94,.12);  color: #22c55e; }
+  .badge-disabled { background: rgba(107,114,128,.12); color: #9ca3af; }
+  .badge-expired  { background: rgba(239,68,68,.12);   color: #ef4444; }
+  .badge-future   { background: rgba(79,142,255,.12);  color: #4f8eff; }
+  .badge-type     { background: rgba(167,139,250,.12); color: #a78bfa; }
+  .badge-concur   { background: rgba(245,158,11,.12);  color: #f59e0b; }
+
+  /* Detail panel */
+  #discount-panel {
+    position: fixed; top: 0; right: -760px; width: 760px; height: 100vh;
+    background: var(--surface); border-left: 1px solid var(--border);
+    z-index: 300; transition: right .25s cubic-bezier(.4,0,.2,1);
+    display: flex; flex-direction: column; overflow: hidden;
+  }
+  #discount-panel.open { right: 0; }
+  .panel-header {
+    padding: 20px 24px; border-bottom: 1px solid var(--border);
+    background: var(--surface); display: flex; align-items: flex-start; justify-content: space-between;
+  }
+  .panel-close { background: none; border: none; color: var(--muted); font-size: 20px; cursor: pointer; padding: 2px 6px; border-radius: 4px; }
+  .panel-close:hover { color: var(--text); background: var(--border); }
+  .panel-discount-id { font-family: var(--mono); font-size: 18px; font-weight: 500; color: var(--accent); }
+  .panel-name { font-size: 14px; font-weight: 600; margin-top: 4px; }
+  .panel-meta { font-size: 12px; color: var(--muted); margin-top: 2px; }
+  .panel-body { flex: 1; overflow-y: auto; padding: 24px; }
+  .detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .detail-item { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 12px 14px; }
+  .detail-label { font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); margin-bottom: 4px; }
+  .detail-value { font-size: 13px; color: var(--text); font-family: var(--mono); word-break: break-all; }
+
+  /* Loading / state */
+  .state-box { padding: 48px; text-align: center; color: var(--muted); font-size: 14px; }
+  .loading-spinner { width: 28px; height: 28px; border: 3px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin .7s linear infinite; margin: 0 auto 12px; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* Login */
+  #v-login { display: flex; align-items: center; justify-content: center; min-height: 60vh; }
+  .login-card { background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 40px; text-align: center; max-width: 360px; }
+  .login-title { font-size: 20px; font-weight: 700; margin-bottom: 8px; }
+  .login-sub { font-size: 13px; color: var(--muted); margin-bottom: 24px; }
+  .btn-primary { background: var(--accent); color: #000; border: none; font-weight: 600; padding: 10px 24px; border-radius: 8px; font-size: 14px; cursor: pointer; transition: opacity .15s; }
+  .btn-primary:hover { opacity: .88; }
+
+  #v-main { display: none; }
+  .overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.5); z-index: 290; }
+  .overlay.open { display: block; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-icon">🏷️</div>
+    <span>DISCOUNTS</span>
+  </div>
+  <div class="header-right">
+    <span class="account-pill" id="account-pill" style="display:none">—</span>
+    <button class="btn btn-signout btn-sm" id="signout-btn" style="display:none" onclick="signOut()">Sign out</button>
+  </div>
+</header>
+
+<div id="v-login">
+  <div class="login-card">
+    <div class="login-title">Periodic Discounts</div>
+    <div class="login-sub">Sign in with your D365 account to view active discount configurations.</div>
+    <button class="btn-primary" onclick="signIn()">Sign in with Microsoft</button>
+  </div>
+</div>
+
+<div id="v-main">
+  <!-- Breadcrumb -->
+  <div class="breadcrumb">
+    <span onclick="history.back()" style="cursor:pointer">← Back</span>
+    <span>·</span><span>OPS PORTAL</span>
+    <span>·</span><span style="color:var(--text)">Periodic Discounts</span>
+  </div>
+
+  <!-- Toolbar -->
+  <div class="toolbar">
+    <div class="toolbar-left">
+      <div class="page-title">Periodic Discounts</div>
+      <div class="page-sub" id="data-range-label">—</div>
+    </div>
+    <div class="search-wrap">
+      <input type="text" class="search-input" id="search-input" placeholder="Search code, name, description…" oninput="applyFilters()" autocomplete="off"/>
+    </div>
+    <select id="type-filter" onchange="applyFilters()">
+      <option value="">All types</option>
+    </select>
+    <select id="concurrency-filter" onchange="applyFilters()">
+      <option value="">All concurrency</option>
+    </select>
+    <select id="company-filter" onchange="applyFilters()">
+      <option value="">All companies</option>
+    </select>
+    <button class="btn btn-ghost btn-sm" onclick="loadData()" id="refresh-btn">↺ Refresh</button>
+  </div>
+
+  <!-- Status pills -->
+  <div class="pills">
+    <div class="sf-pill active" onclick="setStatusFilter(this,'')">All</div>
+    <div class="sf-pill" onclick="setStatusFilter(this,'active')">Active</div>
+    <div class="sf-pill" onclick="setStatusFilter(this,'future')">Upcoming</div>
+    <div class="sf-pill" onclick="setStatusFilter(this,'expired')">Expired</div>
+    <div class="sf-pill" onclick="setStatusFilter(this,'disabled')">Disabled</div>
+  </div>
+
+  <!-- KPI cards -->
+  <div class="kpi-row">
+    <div class="kpi-card c0">
+      <div class="kpi-label">Total Discounts</div>
+      <div class="kpi-value" id="kpi-total">—</div>
+      <div class="kpi-sub" id="kpi-total-sub"></div>
+      <div class="kpi-icon">🏷️</div>
+    </div>
+    <div class="kpi-card c1">
+      <div class="kpi-label">Active Now</div>
+      <div class="kpi-value" id="kpi-active">—</div>
+      <div class="kpi-sub" id="kpi-active-sub"></div>
+      <div class="kpi-icon">✅</div>
+    </div>
+    <div class="kpi-card c2">
+      <div class="kpi-label">Upcoming</div>
+      <div class="kpi-value" id="kpi-future">—</div>
+      <div class="kpi-sub" id="kpi-future-sub"></div>
+      <div class="kpi-icon">📅</div>
+    </div>
+    <div class="kpi-card c3">
+      <div class="kpi-label">Expired / Disabled</div>
+      <div class="kpi-value" id="kpi-inactive">—</div>
+      <div class="kpi-sub" id="kpi-inactive-sub"></div>
+      <div class="kpi-icon">⛔</div>
+    </div>
+  </div>
+
+  <!-- Table -->
+  <div class="table-section">
+    <div class="table-header">
+      <div><span class="card-title">Discount List</span><span class="card-count" id="table-count"></span></div>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th onclick="sortTable('mserp_discountcode')">Code ↕</th>
+            <th onclick="sortTable('mserp_name')">Name ↕</th>
+            <th onclick="sortTable('mserp_periodicdiscounttype')">Type ↕</th>
+            <th onclick="sortTable('mserp_status')">Status ↕</th>
+            <th onclick="sortTable('mserp_validfrom')">Valid From ↕</th>
+            <th onclick="sortTable('mserp_validto')">Valid To ↕</th>
+            <th class="td-right" onclick="sortTable('mserp_discountpercentvalue')">Discount % ↕</th>
+            <th onclick="sortTable('mserp_concurrencymode')">Concurrency ↕</th>
+            <th onclick="sortTable('mserp_dataareaid')">Company ↕</th>
+          </tr>
+        </thead>
+        <tbody id="disc-tbody">
+          <tr><td colspan="9"><div class="state-box"><div class="loading-spinner"></div>Loading…</div></td></tr>
+        </tbody>
+      </table>
+      <div class="pagination" id="pagination"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Detail panel -->
+<div class="overlay" id="overlay" onclick="closePanel()"></div>
+<div id="discount-panel">
+  <div class="panel-header">
+    <div>
+      <div class="panel-discount-id" id="panel-disc-id">—</div>
+      <div class="panel-name" id="panel-disc-name">—</div>
+      <div class="panel-meta" id="panel-disc-meta">—</div>
+    </div>
+    <button class="panel-close" onclick="closePanel()">✕</button>
+  </div>
+  <div class="panel-body" id="panel-body"></div>
+</div>
+
+<script>
+  // ─────────────────────────────────────
+  //  CONFIG
+  // ─────────────────────────────────────
+  const TENANT_ID = "3216ff05-4e76-4673-9760-8546567f2fca";
+  const CLIENT_ID = "c54efe5e-4094-43db-830c-eaf127a06510";
+  const D365_URL  = "https://operations-sales-demo.crm4.dynamics.com";
+  const ENTITY    = "mserp_retaildiscountentities";
+  const PAGE      = 1000;
+  // ─────────────────────────────────────
+
+  const msalInstance = new msal.PublicClientApplication({
+    auth: {
+      clientId: CLIENT_ID,
+      authority: `https://login.microsoftonline.com/${TENANT_ID}`,
+      redirectUri: window.location.href.split("?")[0].split("#")[0],
+      postLogoutRedirectUri: window.location.href.split("?")[0].split("#")[0],
+    },
+    cache: { cacheLocation: "sessionStorage" }
+  });
+  const loginRequest = { scopes: [`${D365_URL}/.default`] };
+  let currentAccount = null;
+  let msalReady = false;
+  let rawData = [];
+  let filtered = [];
+  let sortKey = "mserp_validfrom";
+  let sortAsc = false;
+  let activeStatus = "";
+
+  // ── MSAL INIT ──────────────────────────────────────────────────
+  msalInstance.initialize().then(() => {
+    msalReady = true;
+    msalInstance.handleRedirectPromise().then(resp => {
+      if (resp) setAccount(resp.account);
+      const accs = msalInstance.getAllAccounts();
+      if (accs.length > 0) setAccount(accs[0]);
+    }).catch(e => console.error(e));
+  });
+
+  function setAccount(acc) {
+    currentAccount = acc;
+    document.getElementById("account-pill").textContent = acc.username;
+    document.getElementById("account-pill").style.display = "inline-flex";
+    document.getElementById("signout-btn").style.display = "inline-flex";
+    document.getElementById("v-login").style.display = "none";
+    document.getElementById("v-main").style.display = "block";
+    loadData();
+  }
+
+  async function signIn() {
+    try { await msalInstance.loginRedirect(loginRequest); }
+    catch(e) { console.error(e); alert("Login failed: " + e.message); }
+  }
+
+  function signOut() {
+    if (window.top !== window.self) {
+      window.top.postMessage({ type: "OPS_PORTAL_SIGNOUT" }, "*");
+    } else {
+      msalInstance.logoutRedirect({ account: currentAccount, postLogoutRedirectUri: location.href.split("?")[0].split("#")[0] });
+    }
+  }
+
+  async function getToken() {
+    try {
+      const r = await msalInstance.acquireTokenSilent({ ...loginRequest, account: currentAccount });
+      return r.accessToken;
+    } catch {
+      await msalInstance.acquireTokenRedirect(loginRequest);
+    }
+  }
+
+  // ── UI HELPERS ─────────────────────────────────────────────────
+  function showLoading() {
+    document.getElementById("disc-tbody").innerHTML =
+      '<tr><td colspan="9"><div class="state-box"><div class="loading-spinner"></div><div id="loading-msg">Loading…</div></div></td></tr>';
+  }
+  function updateLoadingMsg(msg) {
+    const el = document.getElementById("loading-msg");
+    if (el) el.textContent = msg;
+  }
+  function showError(msg) {
+    document.getElementById("disc-tbody").innerHTML =
+      `<tr><td colspan="9"><div class="state-box" style="color:var(--red)">⚠ ${esc(msg)}</div></td></tr>`;
+  }
+  function esc(s) {
+    return String(s ?? "").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;");
+  }
+  function fmtDate(s) {
+    if (!s) return "—";
+    return s.split("T")[0];
+  }
+
+  // ── STATUS HELPERS ─────────────────────────────────────────────
+  function getDiscountStatus(r) {
+    const today = new Date().toISOString().split("T")[0];
+    if (r.mserp_status === "1" || r.mserp_status === 1) return "disabled";
+    const from = r.mserp_validfrom?.split("T")[0];
+    const to   = r.mserp_validto?.split("T")[0];
+    if (to && to < today) return "expired";
+    if (from && from > today) return "future";
+    return "active";
+  }
+
+  const STATUS_BADGE = {
+    active:   { label: "Active",    cls: "badge-active"   },
+    future:   { label: "Upcoming",  cls: "badge-future"   },
+    expired:  { label: "Expired",   cls: "badge-expired"  },
+    disabled: { label: "Disabled",  cls: "badge-disabled" },
+  };
+
+  const TYPE_LABELS = {
+    "0": "Discount",
+    "1": "Quantity Discount",
+    "2": "Mix & Match",
+    "3": "Threshold",
+  };
+
+  const CONCURRENCY_LABELS = {
+    "0": "Exclusive",
+    "1": "Best Price",
+    "2": "Compounded",
+  };
+
+  // ── LOAD DATA ──────────────────────────────────────────────────
+  async function loadData() {
+    const btn = document.getElementById("refresh-btn");
+    btn.textContent = "Loading…"; btn.disabled = true;
+    showLoading();
+
+    try {
+      const fields = [
+        "mserp_discountcode",
+        "mserp_name",
+        "mserp_description",
+        "mserp_status",
+        "mserp_periodicdiscounttype",
+        "mserp_validfrom",
+        "mserp_validto",
+        "mserp_discountpercentvalue",
+        "mserp_concurrencymode",
+        "mserp_dataareaid",
+        "mserp_discountrecordid",
+        "mserp_currencycode",
+        "mserp_mixandmatchdiscountamount",
+        "mserp_mixandmatchdiscounttype",
+        "mserp_offerquantitylimit",
+        "mserp_processingstatus",
+        "mserp_isdiscountcoderequired",
+        "mserp_pricingprioritynumber",
+        "mserp_printdescriptiononfiscalreceipt",
+        "mserp_retaildiscountentityid",
+      ].join(",");
+
+      // First page — render immediately
+      updateLoadingMsg("Loading discounts…");
+      const token = await getToken();
+      const firstRes = await fetch(
+        `${D365_URL}/api/data/v9.2/${ENTITY}?$select=${fields}`,
+        { headers: { "Authorization": `Bearer ${token}`, "Accept": "application/json", "OData-MaxVersion": "4.0", "OData-Version": "4.0", "Prefer": `odata.maxpagesize=${PAGE}` } }
+      );
+      if (!firstRes.ok) throw new Error(`${firstRes.status} — ${await firstRes.text()}`);
+      const firstJson = await firstRes.json();
+      rawData = firstJson.value || [];
+
+      populateFilters();
+      applyFilters();
+      document.getElementById("data-range-label").textContent =
+        rawData.length < PAGE ? `${rawData.length} discounts loaded` : `${rawData.length} discounts loaded (more loading…)`;
+
+      // Remaining pages
+      let nextUrl = firstJson["@odata.nextLink"] || null;
+      let page = 1;
+      while (nextUrl) {
+        page++;
+        updateLoadingMsg(`Fetching page ${page} — ${rawData.length} discounts so far…`);
+        const t = await getToken();
+        const res = await fetch(nextUrl, {
+          headers: { "Authorization": `Bearer ${t}`, "Accept": "application/json", "OData-MaxVersion": "4.0", "OData-Version": "4.0", "Prefer": `odata.maxpagesize=${PAGE}` }
+        });
+        if (!res.ok) throw new Error(`${res.status} — ${await res.text()}`);
+        const json = await res.json();
+        rawData = rawData.concat(json.value || []);
+        nextUrl = json["@odata.nextLink"] || null;
+      }
+
+      populateFilters();
+      applyFilters();
+      document.getElementById("data-range-label").textContent = `${rawData.length} discounts loaded`;
+
+    } catch(e) {
+      showError(e.message);
+    } finally {
+      btn.textContent = "↺ Refresh"; btn.disabled = false;
+    }
+  }
+
+  // ── FILTERS ────────────────────────────────────────────────────
+  function populateFilters() {
+    const selType    = document.getElementById("type-filter").value;
+    const selConcur  = document.getElementById("concurrency-filter").value;
+    const selCompany = document.getElementById("company-filter").value;
+
+    const types = [...new Set(rawData.map(r => r.mserp_periodicdiscounttype).filter(v => v != null))].sort();
+    document.getElementById("type-filter").innerHTML =
+      '<option value="">All types</option>' +
+      types.map(t => `<option value="${t}" ${String(t) === selType ? "selected" : ""}>${TYPE_LABELS[String(t)] || t}</option>`).join("");
+
+    const concurs = [...new Set(rawData.map(r => r.mserp_concurrencymode).filter(v => v != null))].sort();
+    document.getElementById("concurrency-filter").innerHTML =
+      '<option value="">All concurrency</option>' +
+      concurs.map(c => `<option value="${c}" ${String(c) === selConcur ? "selected" : ""}>${CONCURRENCY_LABELS[String(c)] || c}</option>`).join("");
+
+    const companies = [...new Set(rawData.map(r => r.mserp_dataareaid).filter(Boolean))].sort();
+    document.getElementById("company-filter").innerHTML =
+      '<option value="">All companies</option>' +
+      companies.map(c => `<option value="${c}" ${c === selCompany ? "selected" : ""}>${c}</option>`).join("");
+  }
+
+  function setStatusFilter(el, status) {
+    document.querySelectorAll(".sf-pill").forEach(p => p.classList.remove("active"));
+    el.classList.add("active");
+    activeStatus = status;
+    applyFilters();
+  }
+
+  function applyFilters() {
+    const q       = (document.getElementById("search-input").value || "").toLowerCase();
+    const type    = document.getElementById("type-filter").value;
+    const concur  = document.getElementById("concurrency-filter").value;
+    const company = document.getElementById("company-filter").value;
+
+    filtered = rawData.filter(r => {
+      const status = getDiscountStatus(r);
+      if (activeStatus && status !== activeStatus) return false;
+      if (type    && String(r.mserp_periodicdiscounttype) !== type) return false;
+      if (concur  && String(r.mserp_concurrencymode) !== concur) return false;
+      if (company && r.mserp_dataareaid !== company) return false;
+      if (q) {
+        const hay = [
+          r.mserp_discountcode,
+          r.mserp_name,
+          r.mserp_description,
+          r.mserp_dataareaid,
+        ].join(" ").toLowerCase();
+        if (!hay.includes(q)) return false;
+      }
+      return true;
+    });
+
+    renderKPIs();
+    renderTable();
+  }
+
+  // ── KPIs ───────────────────────────────────────────────────────
+  function renderKPIs() {
+    const allStatuses = rawData.map(getDiscountStatus);
+    const activeCount  = allStatuses.filter(s => s === "active").length;
+    const futureCount  = allStatuses.filter(s => s === "future").length;
+    const inactiveCount = allStatuses.filter(s => s === "expired" || s === "disabled").length;
+
+    document.getElementById("kpi-total").textContent     = filtered.length.toLocaleString();
+    document.getElementById("kpi-total-sub").textContent = `${rawData.length} total loaded`;
+    document.getElementById("kpi-active").textContent    = activeCount.toLocaleString();
+    document.getElementById("kpi-active-sub").textContent= "currently valid";
+    document.getElementById("kpi-future").textContent    = futureCount.toLocaleString();
+    document.getElementById("kpi-future-sub").textContent= "not yet started";
+    document.getElementById("kpi-inactive").textContent  = inactiveCount.toLocaleString();
+    document.getElementById("kpi-inactive-sub").textContent = "expired or disabled";
+  }
+
+  // ── TABLE ──────────────────────────────────────────────────────
+  let tableSortKey = "mserp_validfrom";
+  let tableSortAsc = false;
+
+  function sortTable(key) {
+    if (tableSortKey === key) tableSortAsc = !tableSortAsc;
+    else { tableSortKey = key; tableSortAsc = true; }
+    renderTable();
+  }
+
+  function renderTable() {
+    const sorted = [...filtered].sort((a, b) => {
+      const av = a[tableSortKey] ?? "";
+      const bv = b[tableSortKey] ?? "";
+      return tableSortAsc ? (av > bv ? 1 : -1) : (av < bv ? 1 : -1);
+    });
+
+    document.getElementById("table-count").textContent = `${sorted.length} discounts`;
+
+    if (sorted.length === 0) {
+      document.getElementById("disc-tbody").innerHTML =
+        '<tr><td colspan="9"><div class="state-box">No discounts match current filters</div></td></tr>';
+      document.getElementById("pagination").textContent = "";
+      return;
+    }
+
+    const today = new Date().toISOString().split("T")[0];
+
+    const rows = sorted.map(r => {
+      const status = getDiscountStatus(r);
+      const badge  = STATUS_BADGE[status];
+      const typeLabel   = TYPE_LABELS[String(r.mserp_periodicdiscounttype)] || r.mserp_periodicdiscounttype ?? "—";
+      const concurLabel = CONCURRENCY_LABELS[String(r.mserp_concurrencymode)] || r.mserp_concurrencymode ?? "—";
+      const pct = r.mserp_discountpercentvalue != null ? r.mserp_discountpercentvalue + "%" : "—";
+      const toDate = fmtDate(r.mserp_validto);
+      const isExpiringSoon = status === "active" && toDate !== "—" && toDate <= new Date(Date.now() + 7*86400000).toISOString().split("T")[0];
+
+      return `<tr style="cursor:pointer" onclick="openPanel(${JSON.stringify(r).replace(/"/g,'&quot;')})">
+        <td class="td-mono td-bold" style="color:var(--accent)">${esc(r.mserp_discountcode || "—")}</td>
+        <td>
+          <div class="td-bold">${esc(r.mserp_name || "—")}</div>
+          ${r.mserp_description ? `<div class="td-muted">${esc(r.mserp_description)}</div>` : ""}
+        </td>
+        <td><span class="badge badge-type">${esc(typeLabel)}</span></td>
+        <td><span class="badge ${badge.cls}">${badge.label}</span></td>
+        <td class="td-mono td-muted">${fmtDate(r.mserp_validfrom)}</td>
+        <td class="td-mono" style="${isExpiringSoon ? 'color:var(--amber);font-weight:600' : ''}">${toDate}${isExpiringSoon ? ' ⚠' : ''}</td>
+        <td class="td-right td-mono">${pct}</td>
+        <td><span class="badge badge-concur">${esc(concurLabel)}</span></td>
+        <td class="td-mono td-muted">${esc(r.mserp_dataareaid || "—")}</td>
+      </tr>`;
+    }).join("");
+
+    document.getElementById("disc-tbody").innerHTML = rows;
+    document.getElementById("pagination").textContent = `Showing ${sorted.length} of ${rawData.length} discounts`;
+  }
+
+  // ── PANEL ──────────────────────────────────────────────────────
+  function openPanel(r) {
+    const status = getDiscountStatus(r);
+    const badge  = STATUS_BADGE[status];
+    document.getElementById("panel-disc-id").textContent   = r.mserp_discountcode || "—";
+    document.getElementById("panel-disc-name").textContent = r.mserp_name || "—";
+    document.getElementById("panel-disc-meta").textContent =
+      `${TYPE_LABELS[String(r.mserp_periodicdiscounttype)] || "—"} · ${r.mserp_dataareaid || "—"} · ${badge.label}`;
+
+    const fields = [
+      ["Discount Code",       r.mserp_discountcode],
+      ["Name",                r.mserp_name],
+      ["Description",         r.mserp_description],
+      ["Type",                TYPE_LABELS[String(r.mserp_periodicdiscounttype)] || r.mserp_periodicdiscounttype],
+      ["Status",              badge.label],
+      ["Valid From",          fmtDate(r.mserp_validfrom)],
+      ["Valid To",            fmtDate(r.mserp_validto)],
+      ["Discount %",          r.mserp_discountpercentvalue != null ? r.mserp_discountpercentvalue + "%" : null],
+      ["Currency",            r.mserp_currencycode],
+      ["Mix & Match Amount",  r.mserp_mixandmatchdiscountamount],
+      ["Mix & Match Type",    r.mserp_mixandmatchdiscounttype],
+      ["Offer Qty Limit",     r.mserp_offerquantitylimit],
+      ["Concurrency Mode",    CONCURRENCY_LABELS[String(r.mserp_concurrencymode)] || r.mserp_concurrencymode],
+      ["Pricing Priority",    r.mserp_pricingprioritynumber],
+      ["Code Required",       r.mserp_isdiscountcoderequired],
+      ["Print on Receipt",    r.mserp_printdescriptiononfiscalreceipt],
+      ["Processing Status",   r.mserp_processingstatus],
+      ["Company",             r.mserp_dataareaid],
+      ["Record ID",           r.mserp_discountrecordid],
+    ].filter(([, v]) => v != null && v !== "");
+
+    document.getElementById("panel-body").innerHTML = `
+      <div class="detail-grid">
+        ${fields.map(([label, val]) => `
+          <div class="detail-item">
+            <div class="detail-label">${esc(label)}</div>
+            <div class="detail-value">${esc(String(val))}</div>
+          </div>`).join("")}
+      </div>`;
+
+    document.getElementById("discount-panel").classList.add("open");
+    document.getElementById("overlay").classList.add("open");
+  }
+
+  function closePanel() {
+    document.getElementById("discount-panel").classList.remove("open");
+    document.getElementById("overlay").classList.remove("open");
+  }
+</script>
+</body>
+</html>
