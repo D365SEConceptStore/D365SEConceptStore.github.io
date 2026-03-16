@@ -842,7 +842,7 @@ async function dashDel(i){
     await Promise.all(r.ids.map(id=>fetch(`${D365_URL}/api/data/v9.2/${ENTITY}(${id})`,{
       method:"DELETE",headers:{"Authorization":`Bearer ${token}`,"OData-MaxVersion":"4.0","OData-Version":"4.0"}
     })));
-    showToast("🗑 Borttagen"); teamLoaded=false; await loadMyData();
+    showToast("🗑 Borttagen"); teamLoaded=false; mgrLoaded=false; await loadMyData();
   }catch(e){alert(e.message);}
 }
 
@@ -972,7 +972,7 @@ async function panelDel(i){
     await Promise.all(r.ids.map(id=>fetch(`${D365_URL}/api/data/v9.2/${ENTITY}(${id})`,{
       method:"DELETE",headers:{"Authorization":`Bearer ${token}`,"OData-MaxVersion":"4.0","OData-Version":"4.0"}
     })));
-    showToast("🗑 Borttagen"); teamLoaded=false; await loadMyData(); renderEntries();
+    showToast("🗑 Borttagen"); teamLoaded=false; mgrLoaded=false; await loadMyData(); renderEntries();
   }catch(e){alert(e.message);}
 }
 
@@ -1000,7 +1000,7 @@ async function submitLeave(){
     if(bad.length){const t=await bad[0].text();throw new Error(`${bad[0].status}: ${t.slice(0,200)}`);}
     closePanel();
     showToast(`✓ ${days.length} dag${days.length!==1?"ar":""} ${type==="parental"?"föräldraledighet":"semester"} ansökt`);
-    teamLoaded=false; await loadMyData();
+    teamLoaded=false; mgrLoaded=false; await loadMyData();
   }catch(err){
     showRes("err",`Fel: ${err.message.slice(0,120)}`);
     btn.disabled=false; lbl.textContent="Skicka";
@@ -1021,7 +1021,7 @@ async function loadMgrData(){
   document.getElementById("mgr-loading").style.display="flex";
   document.getElementById("mgr-content").style.display="none";
   // Reuse teamEntries if already loaded
-  if(teamLoaded){mgrLoaded=true;renderMgr();return;}
+  if(teamLoaded){renderMgr();return;}
   try{
     const token=await getToken();
     const from=`${CURR_YEAR-2}-04-01T00:00:00Z`, to=`${NEXT_YEAR+1}-03-31T23:59:59Z`;
