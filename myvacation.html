@@ -1,0 +1,1207 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Ledighetsportal</title>
+<script src="https://alcdn.msauth.net/browser/2.35.0/js/msal-browser.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<style>
+:root {
+  --bg:#f5f4f2; --surface:#fff; --card:#f0eeeb;
+  --border:rgba(0,0,0,.07); --border-hi:rgba(0,0,0,.13);
+  --accent:#111; --green:#16a34a; --amber:#d97706; --red:#dc2626; --purple:#7c3aed;
+  --text:#111; --text-dim:#6b7280; --text-faint:#d1d5db;
+  --sans:'DM Sans',sans-serif; --mono:'DM Mono',monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:100vh;}
+
+/* HEADER */
+header{background:rgba(255,255,255,.95);backdrop-filter:blur(10px);border-bottom:1px solid var(--border);padding:0 28px;height:56px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;}
+.logo{display:flex;align-items:center;gap:10px;font-size:14px;font-weight:700;}
+.logo-icon{width:30px;height:30px;background:var(--accent);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:15px;}
+.logo-sub{color:var(--text-dim);font-weight:400;}
+.user-pill{display:flex;align-items:center;gap:7px;background:var(--card);border:1px solid var(--border);border-radius:20px;padding:4px 12px;font-size:12px;color:var(--text-dim);font-family:var(--mono);}
+.user-pill .dot{width:6px;height:6px;border-radius:50%;background:var(--text-faint);}
+.user-pill.on .dot{background:var(--green);}
+.user-pill.on{color:var(--green);}
+
+/* BUTTONS */
+.btn{font-family:var(--sans);font-size:13px;font-weight:600;border:none;cursor:pointer;padding:7px 15px;border-radius:8px;transition:all .15s;display:inline-flex;align-items:center;gap:6px;}
+.btn:disabled{opacity:.4;cursor:not-allowed;}
+.btn-primary{background:var(--accent);color:#fff;}
+.btn-primary:hover:not(:disabled){opacity:.8;}
+.btn-ghost{background:transparent;color:var(--text-dim);border:1px solid var(--border);}
+.btn-ghost:hover:not(:disabled){border-color:var(--accent);color:var(--accent);}
+.btn-danger{background:transparent;color:var(--red);border:1px solid rgba(220,38,38,.2);}
+.btn-danger:hover:not(:disabled){background:rgba(220,38,38,.05);}
+.btn-sm{font-size:12px;padding:4px 10px;border-radius:6px;}
+
+/* LOGIN */
+#login-view{display:flex;align-items:center;justify-content:center;min-height:calc(100vh - 56px);}
+.login-card{background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:44px 38px;max-width:380px;width:100%;text-align:center;box-shadow:0 4px 24px rgba(0,0,0,.06);}
+.login-icon{width:56px;height:56px;background:var(--accent);border-radius:14px;margin:0 auto 18px;display:flex;align-items:center;justify-content:center;font-size:24px;}
+.login-title{font-size:20px;font-weight:700;margin-bottom:8px;}
+.login-sub{font-size:13px;color:var(--text-dim);line-height:1.7;margin-bottom:24px;}
+
+/* MAIN TABS */
+#app-view{display:none;}
+.main-tabs{display:flex;background:var(--surface);border-bottom:1px solid var(--border);padding:0 28px;}
+.main-tab{font-family:var(--sans);font-size:13px;font-weight:600;border:none;cursor:pointer;padding:13px 16px;background:transparent;color:var(--text-dim);border-bottom:2px solid transparent;transition:all .15s;}
+.main-tab:hover{color:var(--text);}
+.main-tab.active{color:var(--accent);border-bottom-color:var(--accent);}
+.view{display:none;padding:24px 28px;max-width:1200px;margin:0 auto;animation:fadeUp .2s ease;}
+.view.active{display:block;}
+@keyframes fadeUp{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:translateY(0)}}
+
+/* TOP BAR */
+.top-bar{display:flex;align-items:center;gap:12px;margin-bottom:18px;flex-wrap:wrap;}
+.top-bar-left{flex:1;}
+.page-title{font-size:19px;font-weight:700;letter-spacing:-.02em;}
+.page-sub{font-size:12px;color:var(--text-dim);margin-top:2px;font-family:var(--mono);}
+
+/* YEAR TABS */
+.year-tabs{display:flex;gap:3px;background:var(--card);border:1px solid var(--border);border-radius:9px;padding:3px;}
+.year-tab{font-family:var(--sans);font-size:13px;font-weight:600;border:none;cursor:pointer;padding:5px 16px;border-radius:6px;transition:all .15s;background:transparent;color:var(--text-dim);}
+.year-tab.active{background:var(--accent);color:#fff;}
+.year-tab:hover:not(.active){color:var(--text);}
+
+/* DASHBOARD */
+.dash-layout{display:grid;grid-template-columns:300px 1fr;gap:18px;align-items:start;}
+@media(max-width:900px){.dash-layout{grid-template-columns:1fr;}}
+.stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-bottom:12px;}
+.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px 16px;}
+.stat-num{font-family:var(--mono);font-size:26px;font-weight:700;line-height:1;}
+.stat-lbl{font-size:11px;color:var(--text-dim);margin-top:4px;}
+.stat-bar{height:3px;border-radius:2px;background:var(--border);margin-top:8px;overflow:hidden;}
+.stat-bar-fill{height:100%;border-radius:2px;transition:width .5s ease;}
+.tl-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px 18px;margin-bottom:10px;}
+.tl-title{font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--text-dim);margin-bottom:12px;}
+.month-breakdown{display:grid;grid-template-columns:repeat(6,1fr);gap:5px;margin-bottom:10px;}
+.mb-cell{background:var(--card);border:1px solid var(--border);border-radius:7px;padding:6px 5px;text-align:center;}
+.mb-mo{font-size:9px;font-weight:700;color:var(--text-dim);text-transform:uppercase;}
+.mb-days{font-family:var(--mono);font-size:13px;font-weight:700;margin-top:2px;}
+.mb-bar{height:3px;border-radius:2px;margin-top:4px;background:var(--border);}
+.mb-bar-fill{height:3px;border-radius:2px;}
+.entry{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:10px 12px;display:flex;align-items:center;gap:9px;margin-bottom:6px;}
+.e-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;}
+.e-info{flex:1;min-width:0;}
+.e-dates{font-family:var(--mono);font-size:11px;font-weight:600;}
+.e-type{font-size:10px;color:var(--text-dim);margin-top:1px;}
+.e-days{font-family:var(--mono);font-size:11px;color:var(--text-dim);white-space:nowrap;margin:0 4px;}
+.no-entries{text-align:center;color:var(--text-dim);font-size:12px;padding:20px 0;}
+
+/* CALENDAR */
+.cal-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;}
+@media(max-width:1100px){.cal-grid{grid-template-columns:repeat(3,1fr);}}
+@media(max-width:720px){.cal-grid{grid-template-columns:repeat(2,1fr);}}
+.month-card{background:var(--surface);border:1px solid var(--border);border-radius:11px;overflow:hidden;}
+.month-head{padding:9px 12px;border-bottom:1px solid var(--border);background:var(--card);display:flex;align-items:center;justify-content:space-between;}
+.month-name{font-size:12px;font-weight:700;}
+.month-cnt{font-size:10px;font-family:var(--mono);color:var(--text-dim);}
+.wdays{display:grid;grid-template-columns:18px repeat(7,1fr);padding:6px 7px 2px;gap:1px;}
+.wday{text-align:center;font-size:8px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--text-faint);}
+.days{display:grid;grid-template-columns:18px repeat(7,1fr);padding:0 7px 7px;gap:2px;}
+.wk{display:flex;align-items:center;justify-content:center;font-size:8px;font-family:var(--mono);color:var(--text-dim);}
+.day{aspect-ratio:1;display:flex;align-items:center;justify-content:center;font-size:11px;border-radius:5px;cursor:pointer;transition:background .1s;user-select:none;font-weight:500;position:relative;}
+.day.empty{cursor:default;}
+.day.we{color:var(--text-faint);cursor:default;}
+.day.hol{background:rgba(220,38,38,.07);color:var(--red);cursor:default;font-weight:700;}
+.day.hol::after{content:'';position:absolute;bottom:2px;left:50%;transform:translateX(-50%);width:3px;height:3px;border-radius:50%;background:var(--red);}
+.day.vac{background:rgba(17,17,17,.09);color:var(--text);font-weight:700;}
+.day.par{background:rgba(124,58,237,.09);color:var(--purple);font-weight:700;}
+.day.today{box-shadow:inset 0 0 0 1.5px var(--amber);}
+.day.sel{background:rgba(17,17,17,.13)!important;}
+.day.sel-start,.day.sel-end{background:var(--accent)!important;color:#fff!important;font-weight:700;}
+.day:not(.empty):not(.we):not(.hol):hover{background:rgba(17,17,17,.06);}
+.cal-grid.selecting .day:not(.we):not(.hol){cursor:crosshair;}
+
+/* LEGEND */
+.legend{display:flex;gap:12px;margin-bottom:16px;flex-wrap:wrap;align-items:center;}
+.leg{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--text-dim);}
+.leg-dot{width:9px;height:9px;border-radius:3px;flex-shrink:0;}
+.sel-hint{font-size:12px;color:var(--amber);font-family:var(--mono);margin-left:auto;animation:pulse 1.4s ease infinite;}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+
+/* SEASON TIP */
+.season-tip{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:10px 14px;font-size:13px;margin-bottom:14px;}
+
+/* TEAM */
+.team-controls{display:flex;gap:10px;margin-bottom:18px;flex-wrap:wrap;align-items:center;}
+.search-box{background:var(--surface);border:1px solid var(--border);color:var(--text);font-family:var(--sans);font-size:13px;padding:7px 13px;border-radius:8px;outline:none;width:220px;transition:border-color .15s;}
+.search-box:focus{border-color:var(--accent);}
+.filter-pills{display:flex;gap:5px;flex-wrap:wrap;}
+.fp{font-family:var(--sans);font-size:12px;font-weight:600;border:1px solid var(--border);background:transparent;color:var(--text-dim);padding:4px 12px;border-radius:18px;cursor:pointer;transition:all .15s;}
+.fp.active{background:var(--accent);color:#fff;border-color:var(--accent);}
+.fp:hover:not(.active){border-color:var(--accent);color:var(--accent);}
+.team-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px;}
+.team-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden;}
+.tc-head{padding:12px 14px;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--border);}
+.tc-avatar{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0;}
+.tc-name{font-size:13px;font-weight:700;flex:1;}
+.tc-badges{display:flex;gap:4px;}
+.tc-badge{font-family:var(--mono);font-size:10px;font-weight:700;padding:2px 6px;border-radius:4px;}
+.tc-body{padding:12px 14px;}
+.gantt-track{height:18px;background:var(--card);border-radius:5px;position:relative;overflow:hidden;margin-bottom:6px;}
+.gantt-seg{position:absolute;top:2px;height:14px;border-radius:3px;}
+.gantt-today{position:absolute;top:0;width:1.5px;background:var(--amber);height:100%;z-index:2;}
+.gantt-months{display:flex;margin-bottom:3px;}
+.gantt-mo{font-size:8px;color:var(--text-faint);text-align:center;font-family:var(--mono);}
+.tc-ranges{display:flex;flex-direction:column;gap:4px;}
+.tc-range{display:flex;align-items:center;gap:7px;font-size:11px;}
+.tc-range-dot{width:5px;height:5px;border-radius:50%;flex-shrink:0;}
+.tc-range-dates{font-family:var(--mono);color:var(--text-dim);}
+.tc-range-days{margin-left:auto;font-family:var(--mono);font-size:10px;color:var(--text-faint);}
+.no-team{text-align:center;color:var(--text-dim);padding:40px;font-size:13px;}
+
+/* PANEL */
+.tip{position:fixed;background:var(--accent);color:#fff;border-radius:6px;padding:4px 9px;font-size:11px;pointer-events:none;z-index:50;white-space:nowrap;display:none;}
+#overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.25);z-index:30;backdrop-filter:blur(2px);}
+#panel{position:fixed;top:0;right:-500px;width:460px;height:100vh;background:var(--surface);border-left:1px solid var(--border);z-index:31;display:flex;flex-direction:column;transition:right .3s cubic-bezier(.4,0,.2,1);box-shadow:-6px 0 24px rgba(0,0,0,.07);}
+.ph{padding:16px 20px;border-bottom:1px solid var(--border);background:var(--card);display:flex;align-items:center;justify-content:space-between;}
+.ph-title{font-size:14px;font-weight:700;}
+.ph-sub{font-size:11px;color:var(--text-dim);margin-top:2px;font-family:var(--mono);}
+.pb{flex:1;overflow-y:auto;padding:18px 20px;}
+.psec{margin-bottom:16px;}
+.psec-title{font-size:9px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--text-dim);margin-bottom:8px;}
+.date-disp{background:var(--card);border:1px solid var(--border);border-radius:7px;padding:8px 11px;font-family:var(--mono);font-size:13px;color:var(--accent);margin-bottom:4px;}
+.date-sub{font-size:11px;color:var(--text-dim);}
+.p-result{border-radius:8px;padding:10px 13px;font-size:12px;margin-bottom:12px;display:none;}
+.p-result.ok{background:rgba(22,163,74,.07);border:1px solid rgba(22,163,74,.2);color:var(--green);}
+.p-result.err{background:rgba(220,38,38,.07);border:1px solid rgba(220,38,38,.2);color:var(--red);}
+.p-actions{padding:12px 20px;border-top:1px solid var(--border);display:flex;gap:8px;justify-content:flex-end;}
+.pf{display:flex;flex-direction:column;gap:4px;margin-bottom:10px;}
+.pf label{font-size:9px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--text-dim);}
+.pf select{background:var(--bg);border:1px solid var(--border);color:var(--text);font-family:var(--sans);font-size:13px;padding:7px 10px;border-radius:7px;outline:none;width:100%;}
+.pf select:focus{border-color:var(--accent);}
+.entries-wrap{max-height:280px;overflow-y:auto;}
+
+/* THEME PICKER */
+#theme-modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.2);z-index:50;backdrop-filter:blur(3px);align-items:center;justify-content:center;}
+#theme-modal-bg.open{display:flex;}
+#theme-modal{background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:24px;width:320px;box-shadow:0 8px 32px rgba(0,0,0,.08);}
+.tm-title{font-size:14px;font-weight:700;margin-bottom:4px;}
+.tm-sub{font-size:12px;color:var(--text-dim);margin-bottom:16px;}
+.tm-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;}
+.tm-btn{border:2px solid var(--border);border-radius:10px;padding:12px;cursor:pointer;text-align:left;transition:all .15s;background:var(--card);color:var(--text);position:relative;}
+.tm-btn:hover{border-color:var(--accent);}
+.tm-btn.active{border-color:var(--accent);}
+.tm-icon{font-size:24px;margin-bottom:4px;}
+.tm-name{font-size:12px;font-weight:700;}
+.tm-range{font-size:10px;color:var(--text-dim);margin-top:1px;}
+
+/* MISC */
+.state{display:flex;flex-direction:column;align-items:center;gap:10px;padding:44px 20px;color:var(--text-dim);font-size:13px;text-align:center;}
+.spinner{width:20px;height:20px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite;}
+.sm-spin{width:12px;height:12px;border:2px solid rgba(0,0,0,.1);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite;display:inline-block;}
+@keyframes spin{to{transform:rotate(360deg)}}
+#toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%) translateY(12px);background:var(--accent);color:#fff;font-size:13px;font-weight:700;padding:8px 18px;border-radius:18px;z-index:60;opacity:0;transition:opacity .2s,transform .2s;pointer-events:none;}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+/* SEASON HEADER ANIMATIONS */
+@keyframes spin-slow{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+@keyframes sway{0%,100%{transform:rotate(-8deg)}50%{transform:rotate(8deg)}}
+@keyframes bounce-sm{0%,100%{transform:translateY(0)}50%{transform:translateY(-3px)}}
+@keyframes glow{0%,100%{opacity:1}50%{opacity:.55}}
+.season-summer .logo-icon{animation:spin-slow 9s linear infinite;}
+.season-winter .logo-icon{animation:glow 2s ease-in-out infinite;}
+.season-spring .logo-icon{animation:bounce-sm 2s ease-in-out infinite;}
+.season-autumn .logo-icon{animation:sway 3s ease-in-out infinite;}
+
+/* MANAGER VIEW */
+.mgr-table{width:100%;border-collapse:collapse;}
+.mgr-table th{font-size:9px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--text-dim);padding:0 12px 8px;text-align:left;}
+.mgr-table th.right{text-align:right;}
+.mgr-row{border-top:1px solid var(--border);transition:background .1s;}
+.mgr-row:hover{background:rgba(17,17,17,.02);}
+.mgr-cell{padding:10px 12px;vertical-align:middle;}
+.mgr-name{font-size:13px;font-weight:600;}
+.mgr-away{font-size:11px;color:var(--red);font-weight:600;margin-top:1px;}
+.mgr-gantt{height:16px;background:var(--card);border-radius:4px;position:relative;overflow:hidden;min-width:180px;}
+.mgr-seg{position:absolute;top:2px;height:12px;border-radius:2px;}
+.mgr-today-line{position:absolute;top:0;width:1.5px;background:var(--amber);height:100%;z-index:2;}
+.mgr-upcoming{font-size:11px;color:var(--text-dim);}
+.mgr-upcoming span{display:inline-block;margin-right:8px;white-space:nowrap;}
+.mgr-badge{display:inline-block;font-family:var(--mono);font-size:10px;font-weight:700;padding:1px 6px;border-radius:4px;margin-left:6px;}
+.mgr-vac-badge{background:rgba(17,17,17,.07);color:var(--text);}
+.mgr-par-badge{background:rgba(124,58,237,.08);color:var(--purple);}
+.mgr-away-badge{background:rgba(220,38,38,.08);color:var(--red);}
+
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-icon" id="logo-icon">📅</div>
+    <span>Ledighet <span class="logo-sub">/ Portal</span></span>
+  </div>
+  <div style="display:flex;align-items:center;gap:8px;">
+    <button class="btn btn-ghost btn-sm" onclick="openThemePicker()" title="Tema">⚙️</button>
+    <div class="user-pill" id="user-pill"><div class="dot"></div><span id="user-label">Inte inloggad</span></div>
+    <button class="btn btn-ghost btn-sm" id="signout-btn" style="display:none" onclick="signOut()">Logga ut</button>
+  </div>
+</header>
+
+<div id="login-view">
+  <div class="login-card">
+    <div class="login-icon" id="login-icon">📅</div>
+    <div class="login-title">Ledighetsportal</div>
+    <div class="login-sub">Logga in med ditt Microsoft-konto för att hantera din ledighet.</div>
+    <button class="btn btn-primary" style="width:100%;justify-content:center;font-size:14px;padding:11px;" onclick="signIn()">Logga in med Microsoft</button>
+  </div>
+</div>
+
+<div id="app-view">
+  <div class="main-tabs">
+    <button class="main-tab active" id="tab-dash" onclick="switchTab('dash')">📊 Översikt</button>
+    <button class="main-tab" id="tab-team" onclick="switchTab('team')">👥 Team</button>
+    <button class="main-tab" id="tab-mgr" onclick="switchTab('mgr')" style="display:none">📋 Resursöversikt</button>
+  </div>
+
+  <!-- ÖVERSIKT -->
+  <div class="view active" id="view-dash">
+    <div class="top-bar">
+      <div class="top-bar-left">
+        <div class="page-title">Min översikt</div>
+        <div class="page-sub" id="dash-sub">Laddar…</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:7px;">
+        <button class="btn btn-ghost btn-sm" onclick="changLeaveYear(-1)">‹</button>
+        <div style="font-family:var(--mono);font-size:12px;font-weight:700;min-width:130px;text-align:center;" id="dash-yr-label">–</div>
+        <button class="btn btn-ghost btn-sm" onclick="changLeaveYear(1)">›</button>
+      </div>
+    </div>
+    <div class="season-tip" id="season-tip" style="display:none;"></div>
+    <div class="legend" id="dash-legend" style="display:none;">
+      <div class="leg"><div class="leg-dot" style="background:rgba(17,17,17,.2)"></div>Semester</div>
+      <div class="leg"><div class="leg-dot" style="background:rgba(124,58,237,.15)"></div>Föräldraledighet</div>
+      <div class="leg"><div class="leg-dot" style="background:rgba(220,38,38,.1)"></div>Helgdag</div>
+      <div class="leg"><div class="leg-dot" style="background:transparent;box-shadow:inset 0 0 0 1.5px var(--amber)"></div>Idag</div>
+      <div class="sel-hint" id="sel-hint" style="display:none;">Klicka startdatum…</div>
+    </div>
+    <div id="dash-loading" class="state"><div class="spinner"></div><span>Laddar…</span></div>
+    <div id="dash-content" style="display:none;">
+      <div class="dash-layout">
+        <div>
+          <div class="stat-grid" id="stat-grid"></div>
+          <div class="tl-card">
+            <div class="tl-title">Månadsfördelning</div>
+            <div class="month-breakdown" id="month-breakdown"></div>
+            <div style="height:7px;border-radius:5px;overflow:hidden;background:var(--card);position:relative;" id="year-bar"></div>
+            <div style="display:flex;justify-content:space-between;margin-top:4px;">
+              <span style="font-size:10px;color:var(--text-faint);font-family:var(--mono);" id="bar-from">Apr</span>
+              <span style="font-size:10px;color:var(--text-faint);font-family:var(--mono);" id="bar-to">Mar</span>
+            </div>
+          </div>
+          <div class="tl-card">
+            <div class="tl-title">Ansökningar</div>
+            <div id="dash-ranges"></div>
+          </div>
+        </div>
+        <div>
+          <div class="cal-grid" id="dash-cal-grid" style="grid-template-columns:repeat(2,1fr);gap:8px;"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TEAM -->
+  <div class="view" id="view-team">
+    <div class="top-bar">
+      <div class="top-bar-left">
+        <div class="page-title">Team</div>
+        <div class="page-sub" id="team-sub">Alla kollegors ledigheter</div>
+      </div>
+      <div class="year-tabs" id="team-year-tabs"></div>
+    </div>
+    <div class="team-controls">
+      <input class="search-box" id="team-search" placeholder="🔍  Sök namn…" oninput="renderTeam()"/>
+      <div class="filter-pills">
+        <button class="fp active" data-tf="all" onclick="setTeamFilter('all')">Alla</button>
+        <button class="fp" data-tf="vacation" onclick="setTeamFilter('vacation')">🏖 Semester</button>
+        <button class="fp" data-tf="parental" onclick="setTeamFilter('parental')">👶 Föräldraledighet</button>
+        <button class="fp" data-tf="active" onclick="setTeamFilter('active')">Aktiv just nu</button>
+        <button class="fp" data-tf="me" onclick="setTeamFilter('me')">🙋 Mig</button>
+      </div>
+    </div>
+    <div id="team-loading" class="state"><div class="spinner"></div><span>Laddar…</span></div>
+    <div class="team-grid" id="team-grid" style="display:none;"></div>
+    <div class="no-team" id="team-empty" style="display:none;">Inga poster hittades.</div>
+  </div>
+  <!-- RESURSÖVERSIKT (manager) -->
+  <div class="view" id="view-mgr">
+    <div class="top-bar">
+      <div class="top-bar-left">
+        <div class="page-title">Resursöversikt</div>
+        <div class="page-sub" id="mgr-sub">Semesterår –</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:7px;">
+        <button class="btn btn-ghost btn-sm" onclick="changMgrYear(-1)">‹</button>
+        <div style="font-family:var(--mono);font-size:12px;font-weight:700;min-width:130px;text-align:center;" id="mgr-yr-label">–</div>
+        <button class="btn btn-ghost btn-sm" onclick="changMgrYear(1)">›</button>
+      </div>
+    </div>
+    <div id="mgr-loading" class="state"><div class="spinner"></div><span>Laddar…</span></div>
+    <div id="mgr-content" style="display:none;">
+      <div id="mgr-table"></div>
+    </div>
+  </div>
+
+</div>
+
+<div class="tip" id="tip"></div>
+
+<div id="overlay" onclick="closePanel()"></div>
+<div id="panel">
+  <div class="ph">
+    <div>
+      <div class="ph-title">Ansök om ledighet</div>
+      <div class="ph-sub" id="panel-sub">Välj slutdatum i kalendern</div>
+    </div>
+    <button class="btn btn-ghost btn-sm" onclick="closePanel()">✕</button>
+  </div>
+  <div class="pb">
+    <div class="p-result" id="p-result"></div>
+    <div class="psec">
+      <div class="psec-title">Period</div>
+      <div class="date-disp" id="f_date_disp">—</div>
+      <div class="date-sub" id="f_date_sub"></div>
+    </div>
+    <div class="psec" style="margin-top:14px;">
+      <div class="psec-title">Typ av ledighet</div>
+      <div class="pf">
+        <select id="f_type">
+          <option value="vacation">🏖️  Semester</option>
+          <option value="parental">👶  Föräldraledighet</option>
+        </select>
+      </div>
+    </div>
+    <div class="psec" style="margin-top:4px;">
+      <div class="psec-title">Befintliga ansökningar</div>
+      <div id="entries-wrap" class="entries-wrap"></div>
+    </div>
+  </div>
+  <div class="p-actions">
+    <button class="btn btn-ghost" onclick="closePanel()">Avbryt</button>
+    <button class="btn btn-primary" id="submit-btn" onclick="submitLeave()" disabled>
+      <span id="submit-lbl">Skicka</span>
+    </button>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<div id="theme-modal-bg" onclick="if(event.target===this)closeThemePicker()">
+  <div id="theme-modal">
+    <div class="tm-title">Välj tema</div>
+    <div class="tm-sub" id="tm-sub">Automatiskt baserat på datum</div>
+    <div class="tm-grid" id="tm-grid"></div>
+    <button class="btn btn-ghost btn-sm" style="width:100%;justify-content:center;" onclick="applyTheme('auto');closeThemePicker()">↺ Automatiskt</button>
+  </div>
+</div>
+
+<script>
+// ── CONFIG ──
+const TENANT_ID = "3216ff05-4e76-4673-9760-8546567f2fca";
+const CLIENT_ID = "c54efe5e-4094-43db-830c-eaf127a06510";
+const D365_URL  = "https://operations-sales-demo.crm4.dynamics.com";
+const ENTITY    = "crf93_d365calendars";
+
+// ── DATE UTILS ──
+const NOW       = new Date();
+const CURR_YEAR = NOW.getFullYear();
+const NEXT_YEAR = CURR_YEAR + 1;
+const TODAY     = `${NOW.getFullYear()}-${pad(NOW.getMonth()+1)}-${pad(NOW.getDate())}`;
+function pad(n){ return String(n).padStart(2,'0'); }
+function parseLocal(ds){ const[y,m,d]=ds.split("-"); return new Date(+y,+m-1,+d); }
+function localStr(dt){ return `${dt.getFullYear()}-${pad(dt.getMonth()+1)}-${pad(dt.getDate())}`; }
+function fmt(ds){ if(!ds)return"—"; const[y,m,d]=ds.split("-"); return`${parseInt(d)} ${MS[parseInt(m)-1]} ${y}`; }
+function esc(v){ return String(v||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
+
+const MONTHS = ["Januari","Februari","Mars","April","Maj","Juni","Juli","Augusti","September","Oktober","November","December"];
+const MS     = ["Jan","Feb","Mar","Apr","Maj","Jun","Jul","Aug","Sep","Okt","Nov","Dec"];
+const WDAYS  = ["Mån","Tis","Ons","Tor","Fre","Lör","Sön"];
+
+// ── HOLIDAYS ──
+function easterDate(yr){
+  const a=yr%19,b=Math.floor(yr/100),c=yr%100,d=Math.floor(b/4),e=b%4;
+  const f=Math.floor((b+8)/25),g=Math.floor((b-f+1)/3);
+  const h=(19*a+b-d-g+15)%30,i=Math.floor(c/4),k=c%4;
+  const l=(32+2*e+2*i-h-k)%7,m=Math.floor((a+11*h+22*l)/451);
+  return new Date(yr,Math.floor((h+l-7*m+114)/31)-1,((h+l-7*m+114)%31)+1);
+}
+function buildHolidays(yr){
+  const e=easterDate(yr), ad=(b,n)=>{const x=new Date(b);x.setDate(x.getDate()+n);return x;};
+  const h={}, s=(dt,n)=>h[localStr(dt)]=n;
+  s(new Date(yr,0,1),"Nyårsdagen"); s(new Date(yr,0,6),"Trettondedag jul");
+  s(ad(e,-2),"Långfredagen"); s(e,"Påskdagen"); s(ad(e,1),"Annandag påsk");
+  s(new Date(yr,4,1),"Första maj"); s(ad(e,39),"Kristi himmelsfärdsdag");
+  s(ad(e,49),"Pingstdagen"); s(new Date(yr,5,6),"Nationaldagen");
+  let mid=new Date(yr,5,19); while(mid.getDay()!==5)mid=ad(mid,1);
+  s(mid,"Midsommarafton"); s(ad(mid,1),"Midsommardagen");
+  let ash=new Date(yr,9,31); while(ash.getDay()!==6)ash=ad(ash,1);
+  s(ash,"Alla helgons dag");
+  s(new Date(yr,11,24),"Julafton"); s(new Date(yr,11,25),"Juldagen");
+  s(new Date(yr,11,26),"Annandag jul"); s(new Date(yr,11,31),"Nyårsafton");
+  return h;
+}
+const HC={};
+function hols(yr){ if(!HC[yr])HC[yr]=buildHolidays(yr); return HC[yr]; }
+function isHol(ds){ return !!hols(parseInt(ds.slice(0,4)))[ds]; }
+function isWE(ds){ return (parseLocal(ds).getDay()+6)%7>=5; }
+function isWork(ds){ return !isWE(ds)&&!isHol(ds); }
+function isoWeek(date){
+  const d=new Date(Date.UTC(date.getFullYear(),date.getMonth(),date.getDate()));
+  d.setUTCDate(d.getUTCDate()+4-(d.getUTCDay()||7));
+  return Math.ceil((((d-new Date(Date.UTC(d.getUTCFullYear(),0,1)))/86400000)+1)/7);
+}
+function countWork(s,e2){
+  let c=0,cur=parseLocal(s),end=parseLocal(e2);
+  while(cur<=end){if(isWork(localStr(cur)))c++;cur.setDate(cur.getDate()+1);}
+  return c;
+}
+function nextWork(ds){
+  let d=parseLocal(ds);d.setDate(d.getDate()+1);
+  while(!isWork(localStr(d)))d.setDate(d.getDate()+1);
+  return localStr(d);
+}
+
+// ── MSAL ──
+const msalInstance = new msal.PublicClientApplication({
+  auth:{ clientId:CLIENT_ID, authority:`https://login.microsoftonline.com/${TENANT_ID}`,
+         redirectUri:window.location.href.split("?")[0].split("#")[0] },
+  cache:{ cacheLocation:"sessionStorage" }
+});
+const scopes={scopes:[`${D365_URL}/.default`]};
+let account=null, currentUserId=null;
+
+msalInstance.initialize().then(()=>msalInstance.handleRedirectPromise()).then(resp=>{
+  if(resp) boot(resp.account);
+  else{ const a=msalInstance.getAllAccounts(); if(a.length) boot(a[0]); }
+}).catch(console.error);
+
+async function boot(acc){
+  account=acc;
+  document.getElementById("user-pill").classList.add("on");
+  document.getElementById("user-label").textContent=acc.name||acc.username;
+  document.getElementById("signout-btn").style.display="";
+
+  try{
+    const token=await getToken();
+
+    // WhoAmI
+    const whoRes=await fetch(`${D365_URL}/api/data/v9.2/WhoAmI`,{
+      headers:{"Authorization":`Bearer ${token}`,"Accept":"application/json","OData-MaxVersion":"4.0","OData-Version":"4.0"}
+    });
+    if(whoRes.ok){const j=await whoRes.json();currentUserId=j.UserId;}
+
+    // Role check — must have D365CalenderAccessRoleBasic
+    if(currentUserId){
+      const rolesRes=await fetch(
+        `${D365_URL}/api/data/v9.2/systemusers(${currentUserId})/systemuserroles_association?$select=name`,
+        {headers:{"Authorization":`Bearer ${token}`,"Accept":"application/json","OData-MaxVersion":"4.0","OData-Version":"4.0"}}
+      );
+      const rolesJson=await rolesRes.json();
+      const roleNames=(rolesJson.value||[]).map(r=>r.name);
+      const hasAccess=roleNames.includes("D365CalenderAccessRoleBasic");
+      if(!hasAccess){
+        document.getElementById("login-view").style.display="flex";
+        document.getElementById("login-view").innerHTML=`
+          <div class="login-card">
+            <div class="login-icon">🔒</div>
+            <div class="login-title">Åtkomst nekad</div>
+            <div class="login-sub">Du saknar rollen <strong>D365CalenderAccessRoleBasic</strong> för att använda denna portal.</div>
+          </div>`;
+        return;
+      }
+      isManagerRole=roleNames.includes("D365CalenderAccessRoleManager");
+      if(isManagerRole) document.getElementById("tab-mgr").style.display="";
+    }
+  }catch(e){console.warn("Boot error",e);}
+
+  document.getElementById("login-view").style.display="none";
+  document.getElementById("app-view").style.display="block";
+  buildYearTabSet("team-year-tabs",y=>{teamYear=y;renderTeam();},[CURR_YEAR-1,CURR_YEAR,NEXT_YEAR],CURR_YEAR);
+  loadMyData();
+}
+function signIn(){ msalInstance.loginRedirect(scopes); }
+function signOut(){ msalInstance.logoutRedirect({account}); }
+async function getToken(){
+  try{ return (await msalInstance.acquireTokenSilent({...scopes,account})).accessToken; }
+  catch{ await msalInstance.acquireTokenRedirect(scopes); }
+}
+
+// ── TABS ──
+function switchTab(tab){
+  document.querySelectorAll(".main-tab").forEach(t=>t.classList.toggle("active",t.id===`tab-${tab}`));
+  document.querySelectorAll(".view").forEach(v=>v.classList.toggle("active",v.id===`view-${tab}`));
+  if(tab==="team") loadTeamData();
+  if(tab==="mgr") loadMgrData();
+}
+
+function buildYearTabSet(id,onChange,years=null,defaultYear=null){
+  const wrap=document.getElementById(id); if(!wrap)return; wrap.innerHTML="";
+  const yrs=years||[CURR_YEAR,NEXT_YEAR];
+  const def=defaultYear||CURR_YEAR;
+  yrs.forEach(yr=>{
+    const b=document.createElement("button");
+    b.className="year-tab"+(yr===def?" active":"");
+    b.textContent=yr;
+    b.onclick=()=>{ wrap.querySelectorAll(".year-tab").forEach(t=>t.classList.toggle("active",parseInt(t.textContent)===yr)); onChange(yr); };
+    wrap.appendChild(b);
+  });
+}
+
+// ── LEAVE YEAR ──
+let leaveYearStart = NOW.getMonth()>=3 ? CURR_YEAR : CURR_YEAR-1;
+let mgrLeaveYearStart = NOW.getMonth()>=3 ? CURR_YEAR : CURR_YEAR-1;
+let isManagerRole = false;
+let teamYear = CURR_YEAR;
+function lyFrom(lys){ return `${lys}-04-01`; }
+function lyTo(lys){ return `${lys+1}-03-31`; }
+function lyLabel(lys){ return `Apr ${lys} – Mar ${lys+1}`; }
+function changLeaveYear(dir){ leaveYearStart=Math.max(CURR_YEAR-2,leaveYearStart+dir); renderDashboard(); }
+
+// ── DATA: MY ──
+let entries=[];
+async function loadMyData(){
+  document.getElementById("dash-loading").style.display="flex";
+  document.getElementById("dash-content").style.display="none";
+  document.getElementById("dash-legend").style.display="none";
+  try{
+    const token=await getToken();
+    const from=`${CURR_YEAR-2}-04-01T00:00:00Z`, to=`${NEXT_YEAR+1}-03-31T23:59:59Z`;
+    const ownerF=currentUserId?` and _ownerid_value eq '${currentUserId}'`:"";
+    const f=encodeURIComponent(`crf93_dateandtime ge ${from} and crf93_dateandtime le ${to}${ownerF}`);
+    const sel="crf93_d365calendarid,crf93_dateandtime,crf93_weekdayname,_ownerid_value";
+    const res=await fetch(`${D365_URL}/api/data/v9.2/${ENTITY}?$select=${sel}&$filter=${f}&$orderby=crf93_dateandtime asc&$top=5000`,{
+      headers:{"Authorization":`Bearer ${token}`,"Accept":"application/json","OData-MaxVersion":"4.0","OData-Version":"4.0"}
+    });
+    if(!res.ok){const t=await res.text();throw new Error(`${res.status}: ${t.slice(0,300)}`);}
+    const json=await res.json();
+    entries=(json.value||[]).map(e=>{
+      e._type=(e.crf93_weekdayname||"").toLowerCase()==="parental"?"parental":"vacation";
+      return e;
+    });
+    renderDashboard();
+  }catch(err){
+    document.getElementById("dash-loading").innerHTML=`<div style="color:var(--red);font-size:12px;max-width:500px">⚠ ${esc(err.message)}</div>`;
+  }
+}
+
+// ── DATA: TEAM ──
+let teamEntries=[], teamLoaded=false;
+async function loadTeamData(){
+  if(teamLoaded){renderTeam();return;}
+  document.getElementById("team-loading").style.display="flex";
+  document.getElementById("team-grid").style.display="none";
+  document.getElementById("team-empty").style.display="none";
+  try{
+    const token=await getToken();
+    const from=`${CURR_YEAR-2}-04-01T00:00:00Z`, to=`${NEXT_YEAR+1}-03-31T23:59:59Z`;
+    const f=encodeURIComponent(`crf93_dateandtime ge ${from} and crf93_dateandtime le ${to}`);
+    const sel="crf93_d365calendarid,crf93_dateandtime,crf93_weekdayname,_ownerid_value";
+    const res=await fetch(`${D365_URL}/api/data/v9.2/${ENTITY}?$select=${sel}&$filter=${f}&$orderby=crf93_dateandtime asc&$top=5000`,{
+      headers:{"Authorization":`Bearer ${token}`,"Accept":"application/json","OData-MaxVersion":"4.0","OData-Version":"4.0",
+               "Prefer":'odata.include-annotations="OData.Community.Display.V1.FormattedValue"'}
+    });
+    if(!res.ok){const t=await res.text();throw new Error(`${res.status}: ${t.slice(0,300)}`);}
+    const json=await res.json();
+    teamEntries=(json.value||[]).map(e=>{
+      e._type=(e.crf93_weekdayname||"").toLowerCase()==="parental"?"parental":"vacation";
+      e._ownerName=e["_ownerid_value@OData.Community.Display.V1.FormattedValue"]||"Okänd";
+      e._ownerId=e._ownerid_value||"";
+      return e;
+    });
+    teamLoaded=true; renderTeam();
+  }catch(err){
+    document.getElementById("team-loading").innerHTML=`<div style="color:var(--red);font-size:12px;max-width:500px">⚠ ${esc(err.message)}</div>`;
+  }
+}
+
+// ── CALENDAR ──
+let selStart=null, selEnd=null, selecting=false;
+
+function isInSel(ds){
+  if(!selStart||!selEnd)return false;
+  const[a,b]=selStart<=selEnd?[selStart,selEnd]:[selEnd,selStart];
+  return ds>=a&&ds<=b;
+}
+
+function renderCalInto(gridEl, months, entryMap, clickable){
+  gridEl.innerHTML="";
+  months.forEach(([yr,mo])=>{
+    hols(yr);
+    const first=new Date(yr,mo,1), last=new Date(yr,mo+1,0), offset=(first.getDay()+6)%7;
+    let mVac=0,mPar=0;
+    const card=document.createElement("div"); card.className="month-card";
+    const cntId=`mc-${yr}-${mo}-${gridEl.id}`;
+    card.innerHTML=`<div class="month-head"><span class="month-name">${MONTHS[mo]} ${yr}</span><span class="month-cnt" id="${cntId}"></span></div>
+      <div class="wdays"><div class="wday" style="opacity:.5">V</div>${WDAYS.map(w=>`<div class="wday">${w}</div>`).join("")}</div>
+      <div class="days" id="d-${yr}-${mo}-${gridEl.id}"></div>`;
+    gridEl.appendChild(card);
+    const dEl=card.querySelector(`#d-${yr}-${mo}-${gridEl.id}`);
+    // Week number for first row
+    {const wk=document.createElement("div");wk.className="wk";wk.textContent="v"+isoWeek(first);dEl.appendChild(wk);}
+    for(let i=0;i<offset;i++){const e=document.createElement("div");e.className="day empty";dEl.appendChild(e);}
+    for(let dy=1;dy<=last.getDate();dy++){
+      const date=new Date(yr,mo,dy), ds=localStr(date), dow=(date.getDay()+6)%7;
+      // New row on Monday — inject week number
+      if(dow===0&&dy>1){const wk=document.createElement("div");wk.className="wk";wk.textContent="v"+isoWeek(date);dEl.appendChild(wk);}
+      const we=dow>=5, hol=!!HC[yr]?.[ds];
+      const ens=entryMap[ds]||[], hasVac=ens.some(e=>e._type==="vacation"), hasPar=ens.some(e=>e._type==="parental");
+      const inSel=clickable&&isInSel(ds);
+      let cls="day";
+      if(we)cls+=" we"; else if(hol)cls+=" hol";
+      if(ds===TODAY)cls+=" today";
+      if(!we&&!hol){
+        if(hasPar)cls+=" par"; else if(hasVac)cls+=" vac";
+        if(clickable){
+          if(inSel&&selStart!==ds&&selEnd!==ds)cls+=" sel";
+          if(ds===selStart)cls+=" sel-start";
+          if(ds===selEnd)cls+=" sel-end";
+        }
+      }
+      const el=document.createElement("div"); el.className=cls; el.textContent=dy;
+      if(!we&&!hol){
+        if(clickable){
+          el.addEventListener("click",()=>onDayClick(ds));
+          el.addEventListener("mouseenter",ev=>onHover(ev,ds,ens));
+          el.addEventListener("mouseleave",hideTip);
+        } else {
+          el.addEventListener("mouseenter",ev=>onHover(ev,ds,ens));
+          el.addEventListener("mouseleave",hideTip);
+        }
+      } else if(hol){
+        el.addEventListener("mouseenter",ev=>showTip(ev,HC[yr][ds]));
+        el.addEventListener("mouseleave",hideTip);
+      }
+      dEl.appendChild(el);
+      if(!we&&!hol){if(hasVac)mVac++;if(hasPar)mPar++;}
+    }
+    const parts=[]; if(mVac)parts.push(`${mVac}s`); if(mPar)parts.push(`${mPar}f`);
+    card.querySelector(`#${cntId}`).textContent=parts.join(" · ");
+  });
+}
+
+function lyMonths(lys){
+  return [[lys,3],[lys,4],[lys,5],[lys,6],[lys,7],[lys,8],[lys,9],[lys,10],[lys,11],
+          [lys+1,0],[lys+1,1],[lys+1,2]];
+}
+
+function refreshCal(){
+  const lys=leaveYearStart, from=lyFrom(lys), to=lyTo(lys);
+  const byDate={};
+  entries.forEach(e=>{const ds=e.crf93_dateandtime?.slice(0,10);if(!ds||ds<from||ds>to)return;if(!byDate[ds])byDate[ds]=[];byDate[ds].push(e);});
+  const grid=document.getElementById("dash-cal-grid");
+  if(selecting) grid.classList.add("selecting"); else grid.classList.remove("selecting");
+  renderCalInto(grid, lyMonths(lys), byDate, true);
+}
+
+function onDayClick(ds){
+  if(!selecting){
+    // First click: mark start, stay in calendar
+    selStart=ds; selEnd=null; selecting=true;
+    document.getElementById("sel-hint").style.display="";
+    document.getElementById("sel-hint").textContent=`${fmt(ds)} vald — klicka slutdatum`;
+    refreshCal();
+  } else {
+    // Second click: set end (any order), open panel
+    selEnd=ds;
+    if(selEnd<selStart){const t=selStart;selStart=selEnd;selEnd=t;}
+    selecting=false;
+    document.getElementById("sel-hint").style.display="none";
+    refreshCal();
+    const cnt=countWork(selStart,selEnd);
+    document.getElementById("f_date_disp").textContent=`${fmt(selStart)} → ${fmt(selEnd)}`;
+    document.getElementById("f_date_sub").textContent=cnt>0?`${cnt} arbetsdag${cnt!==1?"ar":""}`:"Inga arbetsdagar";
+    document.getElementById("panel-sub").textContent="Välj typ och skicka";
+    document.getElementById("submit-btn").disabled=cnt===0;
+    renderEntries();
+    document.getElementById("p-result").style.display="none";
+    document.getElementById("overlay").style.display="block";
+    setTimeout(()=>document.getElementById("panel").style.right="0",10);
+  }
+}
+
+function closePanel(){
+  panelRanges=[];
+  const lbl=document.getElementById("submit-lbl"); if(lbl)lbl.textContent="Skicka";
+  const btn=document.getElementById("submit-btn"); if(btn)btn.disabled=true;
+  document.getElementById("panel").style.right="-500px";
+  setTimeout(()=>document.getElementById("overlay").style.display="none",300);
+  selStart=null;selEnd=null;selecting=false;
+  document.getElementById("sel-hint").style.display="none";
+  refreshCal();
+}
+document.getElementById("panel").addEventListener("click",e=>e.stopPropagation());
+document.addEventListener("keydown",e=>{if(e.key==="Escape")closePanel();});
+
+// ── DASHBOARD ──
+function renderDashboard(){
+  document.getElementById("dash-yr-label").textContent=lyLabel(leaveYearStart);
+  const lys=leaveYearStart, from=lyFrom(lys), to=lyTo(lys);
+  const ALLOTMENT=30;
+  const lyE=entries.filter(e=>{const ds=e.crf93_dateandtime?.slice(0,10);return ds&&ds>=from&&ds<=to&&isWork(ds);});
+  let vac=0,par=0;
+  lyE.forEach(e=>{if(e._type==="parental")par++;else vac++;});
+  const vacLeft=Math.max(0,ALLOTMENT-vac);
+  const pct=Math.round(vac/ALLOTMENT*100);
+
+  // Stat cards
+  document.getElementById("stat-grid").innerHTML=`
+    <div class="stat-card" style="grid-column:1/-1;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+        <div><div style="font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--text-dim)">Semestersaldo</div>
+        <div style="font-size:11px;color:var(--text-faint);font-family:var(--mono);margin-top:1px;">${lyLabel(lys)}</div></div>
+        <div style="font-family:var(--mono);font-size:26px;font-weight:700;color:${vacLeft<=0?"var(--red)":vacLeft<=5?"var(--amber)":"var(--green)"}">
+          ${vacLeft}<span style="font-size:13px;color:var(--text-dim)"> / ${ALLOTMENT}</span></div>
+      </div>
+      <div class="stat-bar"><div class="stat-bar-fill" style="width:${pct}%;background:var(--accent)"></div></div>
+      <div style="display:flex;justify-content:space-between;margin-top:5px;font-size:10px;font-family:var(--mono)">
+        <span style="color:var(--text-dim)">${vac} använda</span>
+        <span style="color:${vacLeft<=5?"var(--amber)":"var(--green)"}">${vacLeft} kvar</span>
+      </div>
+    </div>
+    <div class="stat-card"><div class="stat-num" style="color:var(--accent)">${vac}</div><div class="stat-lbl">Semester uttagen</div>
+      <div class="stat-bar"><div class="stat-bar-fill" style="width:${pct}%;background:var(--accent)"></div></div></div>
+    <div class="stat-card"><div class="stat-num" style="color:${vacLeft<=5?"var(--amber)":"var(--green)"}">${vacLeft}</div><div class="stat-lbl">Semester kvar</div>
+      <div class="stat-bar"><div class="stat-bar-fill" style="width:${100-pct}%;background:var(--green)"></div></div></div>
+    <div class="stat-card"><div class="stat-num" style="color:var(--purple)">${par}</div><div class="stat-lbl">Föräldraledighet</div>
+      <div class="stat-bar"><div class="stat-bar-fill" style="width:${Math.min(100,par*3)}%;background:var(--purple)"></div></div></div>
+    <div class="stat-card"><div class="stat-num" style="color:var(--text-dim)">${ALLOTMENT}</div><div class="stat-lbl">Tilldelade / år</div>
+      <div class="stat-bar"><div class="stat-bar-fill" style="width:100%;background:var(--border-hi)"></div></div></div>`;
+
+  // Monthly breakdown Apr–Mar
+  const lym=lyMonths(lys);
+  const lyMoYr=[[lys,3],[lys,4],[lys,5],[lys,6],[lys,7],[lys,8],[lys,9],[lys,10],[lys,11],[lys+1,0],[lys+1,1],[lys+1,2]];
+  const moCounts=lyMoYr.map(()=>({v:0,p:0}));
+  lyE.forEach(e=>{
+    const ds=e.crf93_dateandtime.slice(0,10), mo=parseInt(ds.slice(5,7))-1, yr=parseInt(ds.slice(0,4));
+    const idx=lyMoYr.findIndex(([y,m])=>y===yr&&m===mo);
+    if(idx>=0){if(e._type==="parental")moCounts[idx].p++;else moCounts[idx].v++;}
+  });
+  const maxMo=Math.max(...moCounts.map(m=>m.v+m.p),1);
+  const curMoIdx=lyMoYr.findIndex(([y,m])=>y===CURR_YEAR&&m===NOW.getMonth());
+  document.getElementById("month-breakdown").innerHTML=lyMoYr.map(([,mo],i)=>{
+    const tot=moCounts[i].v+moCounts[i].p;
+    return `<div class="mb-cell" style="${i===curMoIdx?"border-color:var(--amber);":""}">
+      <div class="mb-mo">${MS[mo]}</div>
+      <div class="mb-days" style="color:${tot?"var(--accent)":"var(--text-faint)"}">${tot||"—"}</div>
+      <div class="mb-bar"><div class="mb-bar-fill" style="width:${Math.round(tot/maxMo*100)}%;background:${moCounts[i].p?"var(--purple)":"var(--accent)"}"></div></div>
+    </div>`;
+  }).join("");
+
+  // Year bar
+  const lyS=parseLocal(from), lyEnd=parseLocal(to), lyD=(lyEnd-lyS)/86400000+1;
+  let barH="";
+  lyE.forEach(e=>{
+    const ds=e.crf93_dateandtime.slice(0,10);
+    const l=Math.round((parseLocal(ds)-lyS)/86400000/lyD*100);
+    const col=e._type==="parental"?"rgba(124,58,237,.4)":"rgba(17,17,17,.2)";
+    barH+=`<div style="position:absolute;left:${l}%;width:${Math.max(.4,100/lyD)}%;top:0;height:100%;background:${col}"></div>`;
+  });
+  if(TODAY>=from&&TODAY<=to){
+    const tl=Math.round((parseLocal(TODAY)-lyS)/86400000/lyD*100);
+    barH+=`<div style="position:absolute;left:${tl}%;width:2px;top:0;height:100%;background:var(--amber);z-index:2"></div>`;
+  }
+  document.getElementById("year-bar").innerHTML=`<div style="position:relative;width:100%;height:100%">${barH}</div>`;
+  document.getElementById("bar-from").textContent=`Apr ${lys}`;
+  document.getElementById("bar-to").textContent=`Mar ${lys+1}`;
+
+  // Ranges list
+  const ranges=buildRanges(lyE);
+  dashRanges=ranges;
+  document.getElementById("dash-ranges").innerHTML=ranges.length
+    ? ranges.map((r,i)=>{
+        const days=countWork(r.start,r.end);
+        const col=r.t==="parental"?"var(--purple)":"var(--accent)";
+        return `<div class="entry"><div class="e-dot" style="background:${col}"></div>
+          <div class="e-info"><div class="e-dates">${fmt(r.start)} → ${fmt(r.end)}</div>
+          <div class="e-type">${r.t==="parental"?"Föräldraledighet":"Semester"}</div></div>
+          <div class="e-days">${days}d</div>
+          <button class="btn btn-danger btn-sm" onclick="dashDel(${i})">🗑</button></div>`;
+      }).join("")
+    : `<div class="no-entries">Inga ansökningar för ${lyLabel(lys)}.</div>`;
+
+  // Calendar
+  document.getElementById("dash-loading").style.display="none";
+  document.getElementById("dash-content").style.display="block";
+  document.getElementById("dash-legend").style.display="flex";
+  document.getElementById("dash-sub").textContent=`${lyLabel(lys)} · ${vac} av ${ALLOTMENT} semesterdagar använda`;
+  refreshCal();
+}
+
+async function dashDel(i){
+  const r=dashRanges[i]; if(!r)return;
+  if(!confirm(`Ta bort ${countWork(r.start,r.end)} dagar?`))return;
+  try{
+    const token=await getToken();
+    await Promise.all(r.ids.map(id=>fetch(`${D365_URL}/api/data/v9.2/${ENTITY}(${id})`,{
+      method:"DELETE",headers:{"Authorization":`Bearer ${token}`,"OData-MaxVersion":"4.0","OData-Version":"4.0"}
+    })));
+    showToast("🗑 Borttagen"); teamLoaded=false; await loadMyData();
+  }catch(e){alert(e.message);}
+}
+
+// ── TEAM ──
+let teamFilter="all";
+function setTeamFilter(f){
+  teamFilter=f;
+  document.querySelectorAll(".fp").forEach(b=>b.classList.toggle("active",b.dataset.tf===f));
+  renderTeam();
+}
+const AVC=["#111","#7c3aed","#16a34a","#d97706","#dc2626","#0891b2","#db2777","#ea580c"];
+function avc(n){let h=0;for(let i=0;i<n.length;i++)h=(h*31+n.charCodeAt(i))%AVC.length;return AVC[h];}
+function ini(n){return n.split(" ").map(p=>p[0]||"").slice(0,2).join("").toUpperCase();}
+
+function renderTeam(){
+  document.getElementById("team-loading").style.display="none";
+  const yr=teamYear, q=(document.getElementById("team-search").value||"").toLowerCase();
+  const yS=parseLocal(`${yr}-01-01`), yE=parseLocal(`${yr}-12-31`), yD=(yE-yS)/86400000+1;
+
+  // For "active" filter: use all entries regardless of year to find who's off today
+  const activeYear = teamFilter==="active" ? null : yr;
+  const byOwner={};
+  teamEntries.forEach(e=>{
+    const ds=e.crf93_dateandtime?.slice(0,10); if(!ds)return;
+    if(activeYear!==null&&parseInt(ds.slice(0,4))!==activeYear)return;
+    const id=e._ownerId||"x";
+    if(!byOwner[id])byOwner[id]={name:e._ownerName,id,entries:[]};
+    byOwner[id].entries.push(e);
+  });
+
+  let users=Object.values(byOwner);
+  if(q)users=users.filter(u=>u.name.toLowerCase().includes(q));
+  if(teamFilter==="vacation")users=users.filter(u=>u.entries.some(e=>e._type==="vacation"));
+  if(teamFilter==="parental")users=users.filter(u=>u.entries.some(e=>e._type==="parental"));
+  if(teamFilter==="active"){
+    // Only show users with a leave entry matching exactly today
+    users=users.filter(u=>u.entries.some(e=>e.crf93_dateandtime?.slice(0,10)===TODAY));
+    // Trim each user's entries to just today for clean display
+    users=users.map(u=>({...u,entries:u.entries.filter(e=>e.crf93_dateandtime?.slice(0,10)===TODAY)}));
+  }
+  if(teamFilter==="me"){
+    users=users.filter(u=>
+      (u.id&&currentUserId&&u.id.toLowerCase()===currentUserId.toLowerCase()) ||
+      (account&&u.name&&u.name.toLowerCase()===((account.name||account.username)||"").toLowerCase())
+    );
+  }
+
+  const grid=document.getElementById("team-grid"), empty=document.getElementById("team-empty");
+  if(!users.length){grid.style.display="none";empty.style.display="block";return;}
+  grid.style.display="grid"; empty.style.display="none";
+
+  grid.innerHTML=users.map(u=>{
+    const col=avc(u.name);
+    const vac=u.entries.filter(e=>e._type==="vacation"&&isWork(e.crf93_dateandtime?.slice(0,10))).length;
+    const par=u.entries.filter(e=>e._type==="parental"&&isWork(e.crf93_dateandtime?.slice(0,10))).length;
+    const ranges=buildRanges(u.entries);
+    const moLbls=MS.map((m,i)=>{const w=new Date(yr,i+1,0).getDate()/yD*100;return`<div class="gantt-mo" style="width:${w}%">${m}</div>`;}).join("");
+    let segs="";
+    ranges.forEach(r=>{
+      const l=Math.round((parseLocal(r.start)-yS)/86400000/yD*100);
+      const w=Math.max(.5,Math.round((parseLocal(r.end)-yS)/86400000/yD*100)-l);
+      segs+=`<div class="gantt-seg" style="left:${l}%;width:${w}%;background:${r.t==="parental"?"rgba(124,58,237,.3)":"rgba(17,17,17,.18)"}" title="${fmt(r.start)} → ${fmt(r.end)}"></div>`;
+    });
+    if(yr===CURR_YEAR){const tl=Math.round((parseLocal(TODAY)-yS)/86400000/yD*100);segs+=`<div class="gantt-today" style="left:${tl}%"></div>`;}
+    const upcoming=ranges.filter(r=>r.end>=TODAY).slice(0,3).map(r=>{
+      const isNow=r.start<=TODAY&&r.end>=TODAY;
+      return `<div class="tc-range"><div class="tc-range-dot" style="background:${r.t==="parental"?"var(--purple)":"var(--accent)"}"></div>
+        <span style="color:${isNow?"var(--green)":"var(--text-dim)"}">${isNow?"Nu: ":""}</span>
+        <span class="tc-range-dates">${fmt(r.start)} → ${fmt(r.end)}</span>
+        <span class="tc-range-days">${countWork(r.start,r.end)}d</span></div>`;
+    }).join("");
+    const isMe=(u.id&&currentUserId&&u.id.toLowerCase()===currentUserId.toLowerCase())||(account&&u.name&&u.name.toLowerCase()===((account.name||account.username)||"").toLowerCase());
+    return `<div class="team-card" style="${isMe?"border-color:var(--accent);":""}">
+      <div class="tc-head">
+        <div class="tc-avatar" style="background:${col}18;color:${col}">${ini(u.name)}</div>
+        <div class="tc-name">${esc(u.name)}</div>
+        <div class="tc-badges">
+          ${vac?`<span class="tc-badge" style="background:rgba(17,17,17,.07)">${vac}s</span>`:""}
+          ${par?`<span class="tc-badge" style="background:rgba(124,58,237,.08);color:var(--purple)">${par}f</span>`:""}
+        </div>
+      </div>
+      <div class="tc-body">
+        <div class="gantt-months">${moLbls}</div>
+        <div class="gantt-track">${segs}</div>
+        ${upcoming?`<div class="tc-ranges">${upcoming}</div>`:""}
+      </div>
+    </div>`;
+  }).join("");
+}
+
+// ── RANGES ──
+function buildRanges(ents){
+  const sorted=[...ents].filter(e=>e.crf93_dateandtime).sort((a,b)=>a.crf93_dateandtime.localeCompare(b.crf93_dateandtime));
+  const ranges=[]; let cur=null;
+  sorted.forEach(e=>{
+    const ds=e.crf93_dateandtime.slice(0,10), t=e._type;
+    if(cur&&cur.t===t&&nextWork(cur.end)===ds){cur.end=ds;cur.ids.push(e.crf93_d365calendarid);}
+    else{if(cur)ranges.push(cur);cur={t,start:ds,end:ds,ids:[e.crf93_d365calendarid]};}
+  });
+  if(cur)ranges.push(cur);
+  return ranges;
+}
+
+function renderEntries(){
+  const wrap=document.getElementById("entries-wrap");
+  const lys=leaveYearStart, from=lyFrom(lys), to=lyTo(lys);
+  const lyE=entries.filter(e=>{const ds=e.crf93_dateandtime?.slice(0,10);return ds&&ds>=from&&ds<=to;});
+  if(!lyE.length){wrap.innerHTML='<div class="no-entries">Inga ansökningar</div>';return;}
+  const ranges=buildRanges(lyE);
+  panelRanges=ranges;
+  wrap.innerHTML=ranges.map((r,i)=>{
+    const days=countWork(r.start,r.end);
+    const col=r.t==="parental"?"var(--purple)":"var(--accent)";
+    return `<div class="entry"><div class="e-dot" style="background:${col}"></div>
+      <div class="e-info"><div class="e-dates">${fmt(r.start)} → ${fmt(r.end)}</div>
+      <div class="e-type">${r.t==="parental"?"Föräldraledighet":"Semester"}</div></div>
+      <div class="e-days">${days}d</div>
+      <button class="btn btn-danger btn-sm" onclick="panelDel(${i})">🗑</button></div>`;
+  }).join("");
+}
+
+async function panelDel(i){
+  const r=panelRanges[i]; if(!r)return;
+  if(!confirm(`Ta bort ${countWork(r.start,r.end)} dagar?`))return;
+  try{
+    const token=await getToken();
+    await Promise.all(r.ids.map(id=>fetch(`${D365_URL}/api/data/v9.2/${ENTITY}(${id})`,{
+      method:"DELETE",headers:{"Authorization":`Bearer ${token}`,"OData-MaxVersion":"4.0","OData-Version":"4.0"}
+    })));
+    showToast("🗑 Borttagen"); teamLoaded=false; await loadMyData(); renderEntries();
+  }catch(e){alert(e.message);}
+}
+
+// ── SUBMIT ──
+async function submitLeave(){
+  if(!selStart||!selEnd)return;
+  const type=document.getElementById("f_type").value;
+  const btn=document.getElementById("submit-btn"), lbl=document.getElementById("submit-lbl");
+  btn.disabled=true; lbl.innerHTML='<span class="sm-spin"></span> Skickar';
+  document.getElementById("p-result").style.display="none";
+  const days=[]; let cur=parseLocal(selStart), end=parseLocal(selEnd);
+  while(cur<=end){const ds=localStr(cur);if(isWork(ds))days.push(ds);cur.setDate(cur.getDate()+1);}
+  if(!days.length){showRes("err","Inga arbetsdagar.");btn.disabled=false;lbl.textContent="Skicka";return;}
+  try{
+    const token=await getToken();
+    const results=await Promise.all(days.map(ds=>{
+      const d=parseLocal(ds);
+      return fetch(`${D365_URL}/api/data/v9.2/${ENTITY}`,{
+        method:"POST",
+        headers:{"Authorization":`Bearer ${token}`,"Content-Type":"application/json","OData-MaxVersion":"4.0","OData-Version":"4.0","Accept":"application/json","Prefer":"return=minimal"},
+        body:JSON.stringify({crf93_dateandtime:ds+"T00:00:00Z",crf93_year:String(d.getFullYear()),crf93_dayofmonth:String(d.getDate()),crf93_monthname:MONTHS[d.getMonth()],crf93_weeknumber:String(isoWeek(d)),crf93_isholiday:0,crf93_weekdayname:type}),
+      });
+    }));
+    const bad=results.filter(r=>!r.ok&&r.status!==204);
+    if(bad.length){const t=await bad[0].text();throw new Error(`${bad[0].status}: ${t.slice(0,200)}`);}
+    closePanel();
+    showToast(`✓ ${days.length} dag${days.length!==1?"ar":""} ${type==="parental"?"föräldraledighet":"semester"} ansökt`);
+    teamLoaded=false; await loadMyData();
+  }catch(err){
+    showRes("err",`Fel: ${err.message.slice(0,120)}`);
+    btn.disabled=false; lbl.textContent="Skicka";
+  }
+}
+
+
+// ── MANAGER VIEW ──
+let mgrLoaded = false;
+
+function changMgrYear(dir){
+  mgrLeaveYearStart=Math.max(CURR_YEAR-2, mgrLeaveYearStart+dir);
+  renderMgr();
+}
+
+async function loadMgrData(){
+  if(mgrLoaded){renderMgr();return;}
+  document.getElementById("mgr-loading").style.display="flex";
+  document.getElementById("mgr-content").style.display="none";
+  // Reuse teamEntries if already loaded
+  if(teamLoaded){mgrLoaded=true;renderMgr();return;}
+  try{
+    const token=await getToken();
+    const from=`${CURR_YEAR-2}-04-01T00:00:00Z`, to=`${NEXT_YEAR+1}-03-31T23:59:59Z`;
+    const f=encodeURIComponent(`crf93_dateandtime ge ${from} and crf93_dateandtime le ${to}`);
+    const sel="crf93_d365calendarid,crf93_dateandtime,crf93_weekdayname,_ownerid_value";
+    const res=await fetch(`${D365_URL}/api/data/v9.2/${ENTITY}?$select=${sel}&$filter=${f}&$orderby=crf93_dateandtime asc&$top=5000`,{
+      headers:{"Authorization":`Bearer ${token}`,"Accept":"application/json","OData-MaxVersion":"4.0","OData-Version":"4.0",
+               "Prefer":'odata.include-annotations="OData.Community.Display.V1.FormattedValue"'}
+    });
+    if(!res.ok){const t=await res.text();throw new Error(`${res.status}: ${t.slice(0,300)}`);}
+    const json=await res.json();
+    teamEntries=(json.value||[]).map(e=>{
+      e._type=(e.crf93_weekdayname||"").toLowerCase()==="parental"?"parental":"vacation";
+      e._ownerName=e["_ownerid_value@OData.Community.Display.V1.FormattedValue"]||"Okänd";
+      e._ownerId=e._ownerid_value||"";
+      return e;
+    });
+    teamLoaded=true; mgrLoaded=true;
+    renderMgr();
+  }catch(err){
+    document.getElementById("mgr-loading").innerHTML=`<div style="color:var(--red);font-size:12px;max-width:500px">⚠ ${esc(err.message)}</div>`;
+  }
+}
+
+function renderMgr(){
+  const lys=mgrLeaveYearStart;
+  const from=lyFrom(lys), to=lyTo(lys);
+  const lyS=parseLocal(from), lyEnd=parseLocal(to), lyD=(lyEnd-lyS)/86400000+1;
+
+  document.getElementById("mgr-yr-label").textContent=lyLabel(lys);
+  document.getElementById("mgr-sub").textContent=`Semesterår ${lyLabel(lys)}`;
+
+  // Group entries by owner, filtered to this leave year
+  const byOwner={};
+  teamEntries.forEach(e=>{
+    const ds=e.crf93_dateandtime?.slice(0,10);
+    if(!ds||ds<from||ds>to||!isWork(ds))return;
+    const id=e._ownerId||"x";
+    if(!byOwner[id])byOwner[id]={name:e._ownerName,id,entries:[]};
+    byOwner[id].entries.push(e);
+  });
+
+  // Sort alphabetically
+  const users=Object.values(byOwner).sort((a,b)=>a.name.localeCompare(b.name,"sv"));
+
+  if(!users.length){
+    document.getElementById("mgr-loading").style.display="none";
+    document.getElementById("mgr-content").style.display="block";
+    document.getElementById("mgr-table").innerHTML='<div class="no-entries">Inga poster för detta semesterår.</div>';
+    return;
+  }
+
+  const ALLOTMENT=30;
+
+  const rows=users.map(u=>{
+    const vac=u.entries.filter(e=>e._type==="vacation").length;
+    const par=u.entries.filter(e=>e._type==="parental").length;
+    const vacLeft=Math.max(0,ALLOTMENT-vac);
+    const isAwayToday=u.entries.some(e=>e.crf93_dateandtime?.slice(0,10)===TODAY);
+
+    // Gantt over leave year
+    const ranges=buildRanges(u.entries);
+    let segs="";
+    ranges.forEach(r=>{
+      const l=Math.round((parseLocal(r.start)-lyS)/86400000/lyD*100);
+      const w=Math.max(.5,Math.round((parseLocal(r.end)-lyS)/86400000/lyD*100)-l);
+      const col=r.t==="parental"?"rgba(124,58,237,.3)":"rgba(17,17,17,.18)";
+      segs+=`<div class="mgr-seg" style="left:${l}%;width:${w}%;background:${col}" title="${fmt(r.start)} → ${fmt(r.end)}"></div>`;
+    });
+    // Today marker (only if today falls within this leave year)
+    if(TODAY>=from&&TODAY<=to){
+      const tl=Math.round((parseLocal(TODAY)-lyS)/86400000/lyD*100);
+      segs+=`<div class="mgr-today-line" style="left:${tl}%"></div>`;
+    }
+
+    // Upcoming leave (from today forward)
+    const upcoming=ranges.filter(r=>r.end>=TODAY).slice(0,3).map(r=>{
+      const isNow=r.start<=TODAY&&r.end>=TODAY;
+      const label=r.t==="parental"?"Föräldra":"Semester";
+      const days=countWork(r.start,r.end);
+      return `<span style="color:${isNow?"var(--red)":"var(--text-dim)"}">${isNow?"● ":""}${label}: ${fmt(r.start)}${r.start!==r.end?" → "+fmt(r.end):""} (${days}d)</span>`;
+    }).join("");
+
+    return `<tr class="mgr-row">
+      <td class="mgr-cell" style="min-width:160px;">
+        <div class="mgr-name">${esc(u.name)}${isAwayToday?`<span class="mgr-badge mgr-away-badge">Ledig idag</span>`:""}</div>
+      </td>
+      <td class="mgr-cell" style="min-width:200px;">
+        <div class="mgr-gantt">${segs}</div>
+        <div style="display:flex;justify-content:space-between;margin-top:2px;">
+          <span style="font-size:8px;font-family:var(--mono);color:var(--text-faint)">Apr ${lys}</span>
+          <span style="font-size:8px;font-family:var(--mono);color:var(--text-faint)">Mar ${lys+1}</span>
+        </div>
+      </td>
+      <td class="mgr-cell" style="white-space:nowrap;">
+        ${vac?`<span class="mgr-badge mgr-vac-badge">${vac}s</span>`:""}
+        ${par?`<span class="mgr-badge mgr-par-badge">${par}f</span>`:""}
+        <span style="font-size:11px;color:${vacLeft<=5?"var(--amber)":"var(--text-dim)"};margin-left:4px;">${vacLeft} kvar</span>
+      </td>
+      <td class="mgr-cell mgr-upcoming">${upcoming||`<span style="color:var(--text-faint)">–</span>`}</td>
+    </tr>`;
+  }).join("");
+
+  document.getElementById("mgr-table").innerHTML=`
+    <table class="mgr-table">
+      <thead><tr>
+        <th>Namn</th>
+        <th>Semesterår</th>
+        <th>Uttaget</th>
+        <th>Kommande ledighet</th>
+      </tr></thead>
+      <tbody>${rows}</tbody>
+    </table>`;
+
+  document.getElementById("mgr-loading").style.display="none";
+  document.getElementById("mgr-content").style.display="block";
+}
+
+// ── TOOLTIP ──
+function onHover(ev,ds,ens){
+  let txt=fmt(ds);
+  if(ens.length)txt+=` · ${ens[0]._type==="parental"?"Föräldraledighet":"Semester"}`;
+  else if(selecting)txt+=" · Klicka för slutdatum";
+  showTip(ev,txt);
+}
+function showTip(ev,txt){const t=document.getElementById("tip");t.textContent=txt;t.style.display="block";t.style.left=(ev.clientX+12)+"px";t.style.top=(ev.clientY-28)+"px";}
+function hideTip(){document.getElementById("tip").style.display="none";}
+
+// ── HELPERS ──
+function showRes(t,msg){const el=document.getElementById("p-result");el.className=`p-result ${t}`;el.textContent=msg;el.style.display="block";}
+let _tt;
+function showToast(msg){const t=document.getElementById("toast");t.textContent=msg;t.classList.add("show");clearTimeout(_tt);_tt=setTimeout(()=>t.classList.remove("show"),3200);}
+
+// ── THEMES ──
+const THEMES={
+  summer:{name:"Sommar",icon:"☀️",range:"Jun–Aug",tip:"🌴 Planera sommarsemestern i god tid!",logo:"☀️",season:"summer"},
+  winter:{name:"Jul & Vinter",icon:"❄️",range:"Dec–Jan",tip:"🎄 Ansök om julledighet i tid!",logo:"❄️",season:"winter"},
+  spring:{name:"Påsk & Vår",icon:"🌸",range:"Mar–Apr",tip:"🐣 Påskledighet söks gärna tidigt!",logo:"🌷",season:"spring"},
+  autumn:{name:"Höst",icon:"🍂",range:"Sep–Nov",tip:"🍁 Planera för höstlovet i tid!",logo:"🍁",season:"autumn"},
+};
+let _themeKey="auto";
+
+function detectTheme(){
+  const m=new Date().getMonth();
+  if([5,6,7].includes(m))return"summer";
+  if([11,0].includes(m))return"winter";
+  if([2,3].includes(m))return"spring";
+  if([8,9,10].includes(m))return"autumn";
+  return"summer";
+}
+function applyTheme(key){
+  _themeKey=key;
+  localStorage.setItem("ledighet_theme",key);
+  const tk=key==="auto"?detectTheme():key;
+  const t=THEMES[tk]; if(!t)return;
+  document.getElementById("logo-icon").textContent=t.logo;
+  document.getElementById("login-icon").textContent=t.logo;
+  document.body.className=`season-${t.season}`;
+  const tipEl=document.getElementById("season-tip");
+  if(tipEl){tipEl.textContent=t.tip;tipEl.style.display="block";}
+  renderThemeGrid();
+}
+function openThemePicker(){renderThemeGrid();document.getElementById("theme-modal-bg").classList.add("open");}
+function closeThemePicker(){document.getElementById("theme-modal-bg").classList.remove("open");}
+function renderThemeGrid(){
+  const grid=document.getElementById("tm-grid"); if(!grid)return;
+  const active=_themeKey, auto=detectTheme();
+  document.getElementById("tm-sub").textContent=active==="auto"?`Automatiskt — ${THEMES[auto].name} just nu`:"Manuellt valt";
+  grid.innerHTML=["summer","winter","spring","autumn"].map(k=>{
+    const t=THEMES[k], isA=active===k||(active==="auto"&&k===auto);
+    return `<button class="tm-btn${isA?" active":""}" onclick="applyTheme('${k}');closeThemePicker()">
+      <div class="tm-icon">${t.icon}</div><div class="tm-name">${t.name}</div><div class="tm-range">${t.range}</div>
+      ${active==="auto"&&k===auto?'<div style="position:absolute;top:6px;right:6px;font-size:9px;background:rgba(0,0,0,.07);padding:1px 5px;border-radius:3px;font-weight:700">Auto</div>':''}
+    </button>`;
+  }).join("");
+}
+
+document.addEventListener("DOMContentLoaded",()=>{
+  applyTheme(localStorage.getItem("ledighet_theme")||"auto");
+});
+</script>
+</body>
+</html>
