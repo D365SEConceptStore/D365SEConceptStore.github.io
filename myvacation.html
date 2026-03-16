@@ -369,15 +369,41 @@ header{background:rgba(255,255,255,.95);backdrop-filter:blur(10px);border-bottom
       <div class="date-disp" id="f_date_disp">—</div>
       <div class="date-sub" id="f_date_sub"></div>
     </div>
-    <div class="psec" style="margin-top:14px;">
-      <div class="psec-title">Typ av ledighet</div>
-      <div class="pf">
-        <select id="f_type">
-          <option value="vacation">🏖️  Semester</option>
-          <option value="parental">👶  Föräldraledighet</option>
-        </select>
+
+    <!-- NEW: shown when selection covers existing entries -->
+    <div id="edit-section" style="display:none;margin-top:14px;">
+      <div class="psec">
+        <div class="psec-title">Ändra typ</div>
+        <div class="pf">
+          <select id="f_type_edit">
+            <option value="vacation">🏖️  Semester</option>
+            <option value="parental">👶  Föräldraledighet</option>
+          </select>
+        </div>
+        <div style="display:flex;gap:8px;margin-top:4px;">
+          <button class="btn btn-primary" style="flex:1;justify-content:center;" onclick="updateSelectionType()">
+            <span id="update-lbl">Uppdatera typ</span>
+          </button>
+          <button class="btn btn-danger" style="flex:1;justify-content:center;" onclick="deleteSelection()">
+            🗑 Ta bort
+          </button>
+        </div>
       </div>
     </div>
+
+    <!-- Existing: shown when selection is on empty days -->
+    <div id="create-section" style="margin-top:14px;">
+      <div class="psec">
+        <div class="psec-title">Typ av ledighet</div>
+        <div class="pf">
+          <select id="f_type">
+            <option value="vacation">🏖️  Semester</option>
+            <option value="parental">👶  Föräldraledighet</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
     <div class="psec" style="margin-top:4px;">
       <div class="psec-title">Befintliga ansökningar</div>
       <div id="entries-wrap" class="entries-wrap"></div>
@@ -714,20 +740,71 @@ function onDayClick(ds){
     selecting=false;
     document.getElementById("sel-hint").style.display="none";
     refreshCal();
-    const cnt=countWork(selStart,selEnd);
-    document.getElementById("f_date_disp").textContent=`${fmt(selStart)} → ${fmt(selEnd)}`;
-    document.getElementById("f_date_sub").textContent=cnt>0?`${cnt} arbetsdag${cnt!==1?"ar":""}`:"Inga arbetsdagar";
-    document.getElementById("panel-sub").textContent="Välj typ och skicka";
-    document.getElementById("submit-btn").disabled=cnt===0;
-    renderEntries();
-    document.getElementById("p-result").style.display="none";
-    document.getElementById("overlay").style.display="block";
-    setTimeout(()=>document.getElementById("panel").style.right="0",10);
+    openPanelForSelection();
   }
+}
+
+function openPanelForSelection(){
+  const cnt=countWork(selStart,selEnd);
+  document.getElementById("f_date_disp").textContent=
+    selStart===selEnd ? fmt(selStart) : `${fmt(selStart)} → ${fmt(selEnd)}`;
+  document.getElementById("f_date_sub").textContent=
+    cnt>0 ? `${cnt} arbetsdag${cnt!==1?"ar":""}` : "Inga arbetsdagar";
+  document.getElementById("p-result").style.display="none";
+
+  // Work out which days in the selection have existing entries
+  const lys=leaveYearStart, from=lyFrom(lys), to=lyTo(lys);
+  const workDays=[];
+  let cur=parseLocal(selStart), end=parseLocal(selEnd);
+  while(cur<=end){const ds=localStr(cur);if(isWork(ds))workDays.push(ds);cur.setDate(cur.getDate()+1);}
+
+  const coveredEntries=entries.filter(e=>{
+    const ds=e.crf93_dateandtime?.slice(0,10);
+    return ds && workDays.includes(ds);
+  });
+  const coveredDays=new Set(coveredEntries.map(e=>e.crf93_dateandtime.slice(0,10)));
+  const allCovered=workDays.length>0 && workDays.every(d=>coveredDays.has(d));
+  const noneCovered=coveredDays.size===0;
+
+  if(allCovered){
+    // Edit mode: all days already booked
+    const dominantType=coveredEntries.filter(e=>e._type==="parental").length > coveredEntries.filter(e=>e._type==="vacation").length
+      ? "parental" : "vacation";
+    document.getElementById("f_type_edit").value=dominantType;
+    document.getElementById("edit-section").style.display="block";
+    document.getElementById("create-section").style.display="none";
+    document.getElementById("submit-btn").style.display="none";
+    document.getElementById("panel-sub").textContent="Ändra eller ta bort";
+  } else if(noneCovered){
+    // Create mode: no days booked
+    document.getElementById("edit-section").style.display="none";
+    document.getElementById("create-section").style.display="block";
+    document.getElementById("submit-btn").style.display="";
+    document.getElementById("submit-btn").disabled=cnt===0;
+    document.getElementById("panel-sub").textContent="Välj typ och skicka";
+  } else {
+    // Mixed mode: some days booked, some not — show both
+    const unbooked=workDays.filter(d=>!coveredDays.has(d)).length;
+    document.getElementById("edit-section").style.display="block";
+    document.getElementById("create-section").style.display="block";
+    document.getElementById("submit-btn").style.display="";
+    document.getElementById("submit-btn").disabled=cnt===0;
+    document.getElementById("panel-sub").textContent=`${coveredDays.size} bokade · ${unbooked} lediga dagar`;
+    const dominantType=coveredEntries.filter(e=>e._type==="parental").length > coveredEntries.filter(e=>e._type==="vacation").length
+      ? "parental" : "vacation";
+    document.getElementById("f_type_edit").value=dominantType;
+  }
+
+  renderEntries();
+  document.getElementById("overlay").style.display="block";
+  setTimeout(()=>document.getElementById("panel").style.right="0",10);
 }
 
 function closePanel(){
   panelRanges=[];
+  document.getElementById("edit-section").style.display="none";
+  document.getElementById("create-section").style.display="block";
+  document.getElementById("submit-btn").style.display="";
   const lbl=document.getElementById("submit-lbl"); if(lbl)lbl.textContent="Skicka";
   const btn=document.getElementById("submit-btn"); if(btn)btn.disabled=true;
   document.getElementById("panel").style.right="-500px";
@@ -974,6 +1051,75 @@ async function panelDel(i){
     })));
     showToast("🗑 Borttagen"); teamLoaded=false; mgrLoaded=false; await loadMyData(); renderEntries();
   }catch(e){alert(e.message);}
+}
+
+// ── EDIT SELECTION ──
+async function updateSelectionType(){
+  if(!selStart||!selEnd)return;
+  const type=document.getElementById("f_type_edit").value;
+  const lbl=document.getElementById("update-lbl");
+  lbl.innerHTML='<span class="sm-spin"></span>';
+
+  // Find all entries in the selection range
+  const workDays=[];
+  let cur=parseLocal(selStart), end=parseLocal(selEnd);
+  while(cur<=end){const ds=localStr(cur);if(isWork(ds))workDays.push(ds);cur.setDate(cur.getDate()+1);}
+  const toUpdate=entries.filter(e=>{
+    const ds=e.crf93_dateandtime?.slice(0,10);
+    return ds&&workDays.includes(ds);
+  });
+  if(!toUpdate.length){lbl.textContent="Uppdatera typ";return;}
+
+  try{
+    const token=await getToken();
+    await Promise.all(toUpdate.map(e=>
+      fetch(`${D365_URL}/api/data/v9.2/${ENTITY}(${e.crf93_d365calendarid})`,{
+        method:"PATCH",
+        headers:{"Authorization":`Bearer ${token}`,"Content-Type":"application/json",
+                 "OData-MaxVersion":"4.0","OData-Version":"4.0","Prefer":"return=minimal"},
+        body:JSON.stringify({crf93_weekdayname:type}),
+      })
+    ));
+    closePanel();
+    showToast(`✓ ${toUpdate.length} dag${toUpdate.length!==1?"ar":""} uppdaterade till ${type==="parental"?"föräldraledighet":"semester"}`);
+    teamLoaded=false; mgrLoaded=false; await loadMyData();
+  }catch(err){
+    showRes("err",`Fel: ${err.message.slice(0,120)}`);
+  }finally{
+    lbl.textContent="Uppdatera typ";
+  }
+}
+
+async function deleteSelection(){
+  if(!selStart||!selEnd)return;
+  const workDays=[];
+  let cur=parseLocal(selStart), end=parseLocal(selEnd);
+  while(cur<=end){const ds=localStr(cur);if(isWork(ds))workDays.push(ds);cur.setDate(cur.getDate()+1);}
+  const toDelete=entries.filter(e=>{
+    const ds=e.crf93_dateandtime?.slice(0,10);
+    return ds&&workDays.includes(ds);
+  });
+  if(!toDelete.length)return;
+  if(!confirm(`Ta bort ${toDelete.length} dag${toDelete.length!==1?"ar":""} (${fmt(selStart)} → ${fmt(selEnd)})?`))return;
+
+  const lbl=document.querySelector("#edit-section .btn-danger");
+  if(lbl)lbl.disabled=true;
+
+  try{
+    const token=await getToken();
+    await Promise.all(toDelete.map(e=>
+      fetch(`${D365_URL}/api/data/v9.2/${ENTITY}(${e.crf93_d365calendarid})`,{
+        method:"DELETE",
+        headers:{"Authorization":`Bearer ${token}`,"OData-MaxVersion":"4.0","OData-Version":"4.0"},
+      })
+    ));
+    closePanel();
+    showToast(`🗑 ${toDelete.length} dag${toDelete.length!==1?"ar":""} borttagna`);
+    teamLoaded=false; mgrLoaded=false; await loadMyData();
+  }catch(err){
+    showRes("err",`Fel: ${err.message.slice(0,120)}`);
+    if(lbl)lbl.disabled=false;
+  }
 }
 
 // ── SUBMIT ──
