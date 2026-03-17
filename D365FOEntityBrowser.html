@@ -240,7 +240,13 @@ const msalInstance = new msal.PublicClientApplication({
     authority: `https://login.microsoftonline.com/${TENANT_ID}`,
     redirectUri: window.location.href.split("?")[0].split("#")[0],
   },
-  cache: { cacheLocation: "sessionStorage" }
+  cache: { cacheLocation: "sessionStorage" },
+  system: {
+    allowRedirectInIframe: false,   // never redirect inside iframe
+    windowHashTimeout: 9000,
+    iframeHashTimeout: 9000,
+    loadFrameTimeout: 9000,
+  }
 });
 
 // FO requires the base URL as scope (no /api/data path)
@@ -263,19 +269,16 @@ msalInstance.initialize().then(() => {
     setAccount(accounts[0]);
     return;
   }
-  // If embedded inside FO, attempt silent SSO using the FO session (no login screen)
+  // If embedded inside FO, attempt silent token acquisition
+  // Uses prompt=none via hidden iframe — no redirect, no popup
   if (isEmbedded()) {
-    msalInstance.ssoSilent({ ...loginRequest, loginHint: "" })
-      .then(r => setAccount(r.account))
+    msalInstance.ssoSilent({
+      ...loginRequest,
+      prompt: "none",
+    }).then(r => setAccount(r.account))
       .catch(() => {
-        // SSO silent failed — try acquireTokenSilent with no account hint
-        // FO shares the AAD session so this often works without prompt
-        msalInstance.acquireTokenSilent(loginRequest)
-          .then(r => setAccount(r.account))
-          .catch(() => {
-            // Last resort: show login button but with a note that they're in FO
-            document.getElementById("login-hint").style.display = "block";
-          });
+        // Show login button — user needs one-time popup auth
+        document.getElementById("login-hint").style.display = "block";
       });
   }
 }).catch(console.error);
