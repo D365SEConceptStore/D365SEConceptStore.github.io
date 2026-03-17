@@ -282,8 +282,15 @@ msalInstance.initialize().then(() => {
 }).catch(console.error);
 
 function isEmbedded() {
-  try { return window.self !== window.top; }
-  catch { return true; }
+  try {
+    if (window.self === window.top) return false;
+    // Try to read parent hostname — throws if cross-origin
+    const parentHost = window.top.location.hostname;
+    return parentHost.includes("dynamics.com");
+  } catch {
+    // Cross-origin iframe — could be FO, assume embedded
+    return window.self !== window.top;
+  }
 }
 
 function setAccount(account) {
