@@ -281,14 +281,14 @@ msalInstance.initialize().then(() => {
 }).catch(console.error);
 
 function isEmbedded() {
+  // Only return true if we can positively confirm parent is dynamics.com
+  // If we can't read parent (cross-origin), we do NOT assume FO — could be any iframe
   try {
     if (window.self === window.top) return false;
-    // Try to read parent hostname — throws if cross-origin
     const parentHost = window.top.location.hostname;
     return parentHost.includes("dynamics.com");
   } catch {
-    // Cross-origin iframe — could be FO, assume embedded
-    return window.self !== window.top;
+    return false; // Can't confirm it's FO — treat as standalone
   }
 }
 
@@ -311,10 +311,35 @@ if (isEmbedded()) {
 }
 
 async function signIn() {
-  if (!isConfigured()) { alert("Configure TENANT_ID, CLIENT_ID and FO_URL in the script first."); return; }
-  if (!msalReady) { alert("Auth library still initializing — try again in a moment."); return; }
-  try { await msalInstance.loginRedirect(loginRequest); }
-  catch (e) { console.error(e); alert("Login failed: " + e.message); }
+  if (!isConfigured()) {
+    showLoginError("Configure TENANT_ID, CLIENT_ID and FO_URL in the script first.");
+    return;
+  }
+  if (!msalReady) {
+    showLoginError("Auth library still initializing — try again in a moment.");
+    return;
+  }
+  try {
+    document.querySelector("#login-panel button.btn-primary").textContent = "Redirecting…";
+    await msalInstance.loginRedirect(loginRequest);
+  } catch (e) {
+    console.error(e);
+    showLoginError("Login failed: " + e.message);
+    document.querySelector("#login-panel button.btn-primary").textContent = "Sign in with Microsoft";
+  }
+}
+
+function showLoginError(msg) {
+  let el = document.getElementById("login-error");
+  if (!el) {
+    el = document.createElement("div");
+    el.id = "login-error";
+    el.style.cssText = "background:rgba(204,34,0,0.06);border:1px solid rgba(204,34,0,0.25);border-radius:3px;padding:12px 16px;font-family:var(--mono);font-size:11px;color:var(--error);margin-bottom:12px;line-height:1.6";
+    const btn = document.querySelector("#login-panel button.btn-primary");
+    btn.parentNode.insertBefore(el, btn);
+  }
+  el.textContent = msg;
+  el.style.display = "block";
 }
 
 function signOut() { msalInstance.logoutRedirect(); }
