@@ -521,6 +521,25 @@ async function fetchEntity(url) {
     const keys = Object.keys(rows[0]).filter(k => !k.startsWith("@"));
     badge.innerHTML = `<span class="badge">${rows.length} rows</span>${nextLink ? ' <span class="badge-warn">more pages</span>' : ''}`;
 
+    // Auto-detect sort field if user hasn't set one manually
+    const manualOrderby = document.getElementById("odata-orderby").value.trim();
+    if (!manualOrderby) {
+      // Common FO audit/timestamp fields in priority order
+      const candidates = ["modifiedDateTime","createdDateTime","ModifiedDateTime","CreatedDateTime",
+                          "SysRowVersionNumber","RecId","recid","dataAreaId"];
+      const found = candidates.find(f => keys.includes(f));
+      if (found) {
+        // Sort rows in memory by that field descending
+        rows.sort((a, b) => {
+          const va = a[found], vb = b[found];
+          if (va == null) return 1;
+          if (vb == null) return -1;
+          return String(vb).localeCompare(String(va));
+        });
+        badge.innerHTML += ` <span class="badge-warn">↓ ${found}</span>`;
+      }
+    }
+
     window._foRows   = rows;
     window._foKeys   = keys;
     window._foVis    = new Set(keys);
