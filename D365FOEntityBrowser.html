@@ -8,14 +8,13 @@
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
   <style>
     :root {
-      --bg:#0a0a0f; --surface:#111118; --border:#1e1e2e;
-      --accent:#00e5ff; --accent-dim:rgba(0,229,255,0.08); --accent-mid:rgba(0,229,255,0.18);
-      --text:#e0e0f0; --muted:#555570; --error:#ff4d6d; --success:#00e5a0;
+      --bg:#f5f5f3; --surface:#fff; --border:#e0e0da;
+      --accent:#0066cc; --accent-dim:rgba(0,102,204,0.07); --accent-mid:rgba(0,102,204,0.15);
+      --text:#1a1a1a; --muted:#888; --error:#cc2200; --success:#1a7a3a;
       --mono:'IBM Plex Mono',monospace; --sans:'IBM Plex Sans',sans-serif;
     }
     *{box-sizing:border-box;margin:0;padding:0}
     body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:100vh;display:flex;flex-direction:column}
-    body::before{content:'';position:fixed;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.03) 2px,rgba(0,0,0,0.03) 4px);pointer-events:none;z-index:999}
 
     header{border-bottom:1px solid var(--border);padding:18px 32px;display:flex;align-items:center;justify-content:space-between;background:var(--surface);flex-shrink:0}
     .logo{font-family:var(--mono);font-size:13px;font-weight:600;letter-spacing:.15em;color:var(--accent);text-transform:uppercase}
@@ -77,7 +76,7 @@
     .state-msg.error{color:var(--error)}
 
     /* Dropdown */
-    #entity-dropdown{display:none;position:absolute;top:100%;left:0;right:0;z-index:100;background:#0f0f18;border:1px solid var(--border);border-top:none;max-height:280px;overflow-y:auto;border-radius:0 0 3px 3px}
+    #entity-dropdown{display:none;position:absolute;top:100%;left:0;right:0;z-index:100;background:var(--surface);border:1px solid var(--border);border-top:none;max-height:280px;overflow-y:auto;border-radius:0 0 3px 3px}
     .dd-item{padding:9px 14px;cursor:pointer;font-family:var(--mono);font-size:12px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center}
     .dd-item:hover,.dd-item.hi{background:var(--accent-dim)}
     .dd-item-name{color:var(--text)}
@@ -141,7 +140,7 @@
     <p class="hint">Sign in with your Microsoft account to browse D365 FO data entities via the OData API.<br><br>
       This tool calls <code style="color:var(--accent);font-family:var(--mono)">/data/{EntityName}</code> directly.<br><br>
       <strong style="color:var(--accent)">CORS note:</strong> For direct browser use, host this file inside D365 FO or add your origin to FO's allowed origins under System administration → Setup → System parameters.</p>
-    <div id="login-hint" style="display:none;background:rgba(0,229,255,0.06);border:1px solid rgba(0,229,255,0.15);border-radius:3px;padding:12px 16px;font-family:var(--mono);font-size:11px;color:var(--accent);margin-bottom:12px;line-height:1.7">
+    <div id="login-hint" style="display:none;background:rgba(0,102,204,0.06);border:1px solid rgba(0,102,204,0.2);border-radius:3px;padding:12px 16px;font-family:var(--mono);font-size:11px;color:var(--accent);margin-bottom:12px;line-height:1.7">
       Embedded in D365 FO but could not auto-sign in.<br>
       Click below to complete authentication — only needed once per session.
     </div>
@@ -306,7 +305,7 @@ function setAccount(account) {
 // Show embedded mode banner if inside an iframe
 if (isEmbedded()) {
   const bar = document.createElement("div");
-  bar.style.cssText = "background:rgba(0,229,255,0.06);border-bottom:1px solid rgba(0,229,255,0.15);padding:6px 32px;font-family:var(--mono);font-size:10px;color:var(--accent);letter-spacing:.08em";
+  bar.style.cssText = "background:rgba(0,102,204,0.05);border-bottom:1px solid rgba(0,102,204,0.15);padding:6px 32px;font-family:var(--mono);font-size:10px;color:var(--accent);letter-spacing:.08em";
   bar.textContent = "▸ EMBEDDED MODE — running inside D365 FO";
   document.body.insertBefore(bar, document.querySelector("main"));
 }
@@ -517,8 +516,17 @@ async function fetchEntity(url) {
       return;
     }
 
-    // Filter out OData metadata keys (@odata.*)
-    const keys = Object.keys(rows[0]).filter(k => !k.startsWith("@"));
+    // Filter out OData metadata keys (@odata.*) and deduplicate navigation properties
+    // FO returns both "FieldName" and "_FieldName_value" for lookups — keep the clean one
+    const rawKeys = Object.keys(rows[0]).filter(k => !k.startsWith("@"));
+    const keys = rawKeys.filter(k => {
+      // Drop _Xxx_value pattern if the plain Xxx version exists
+      if (k.startsWith("_") && k.endsWith("_value")) {
+        const plain = k.slice(1, -6); // strip leading _ and trailing _value
+        if (rawKeys.includes(plain)) return false;
+      }
+      return true;
+    });
     badge.innerHTML = `<span class="badge">${rows.length} rows</span>${nextLink ? ' <span class="badge-warn">more pages</span>' : ''}`;
 
     // Auto-detect sort field if user hasn't set one manually
