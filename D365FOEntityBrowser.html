@@ -320,12 +320,16 @@ async function signIn() {
     return;
   }
   try {
-    document.querySelector("#login-panel button.btn-primary").textContent = "Redirecting…";
-    await msalInstance.loginRedirect(loginRequest);
+    const btn = document.querySelector("#login-panel button.btn-primary");
+    btn.textContent = "Opening login…"; btn.disabled = true;
+    // Use popup — works both standalone and inside iframes
+    const resp = await msalInstance.loginPopup(loginRequest);
+    setAccount(resp.account);
   } catch (e) {
     console.error(e);
+    const btn = document.querySelector("#login-panel button.btn-primary");
+    btn.textContent = "Sign in with Microsoft"; btn.disabled = false;
     showLoginError("Login failed: " + e.message);
-    document.querySelector("#login-panel button.btn-primary").textContent = "Sign in with Microsoft";
   }
 }
 
@@ -349,7 +353,13 @@ async function getToken() {
     const r = await msalInstance.acquireTokenSilent({ ...loginRequest, account: currentAccount });
     return r.accessToken;
   } catch {
-    await msalInstance.acquireTokenRedirect(loginRequest);
+    // Silent failed — use popup (works in iframes unlike redirect)
+    try {
+      const r = await msalInstance.acquireTokenPopup(loginRequest);
+      return r.accessToken;
+    } catch (e) {
+      throw new Error("Could not acquire token: " + e.message);
+    }
   }
 }
 
